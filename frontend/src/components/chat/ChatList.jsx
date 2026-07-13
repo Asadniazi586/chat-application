@@ -29,7 +29,6 @@ const ChatList = ({
 
     console.log('🔄 ChatList: Setting up onAny listener for user-typing...')
 
-    // ✅ This will catch ALL events and we filter for user-typing
     const handleAnyEvent = (event, ...args) => {
       if (event === 'user-typing') {
         const data = args[0]
@@ -37,7 +36,6 @@ const ChatList = ({
         
         const { conversationId, userId, isTyping } = data
         
-        // ✅ Skip if it's the current user's own typing event
         if (userId === user?._id) {
           console.log('⏭️ ChatList: Skipping own typing event')
           return
@@ -65,9 +63,7 @@ const ChatList = ({
       }
     }
 
-    // ✅ Add the onAny listener
     socket.onAny(handleAnyEvent)
-
     console.log('✅ ChatList: onAny listener registered')
 
     return () => {
@@ -78,7 +74,7 @@ const ChatList = ({
     }
   }, [socket, user?._id])
 
-  // ✅ Handle visibility change to refresh when coming back to chat list - KEPT (safe)
+  // ✅ Handle visibility change to refresh when coming back to chat list
   useEffect(() => {
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
@@ -100,7 +96,7 @@ const ChatList = ({
     }
   }, [setConversations])
 
-  // ✅ Force refresh when component mounts - ✅ FIXED: Use api instead of axios
+  // ✅ Force refresh when component mounts
   useEffect(() => {
     const refreshConversations = async () => {
       try {
@@ -271,7 +267,6 @@ const ChatList = ({
       })
     }
 
-    // ✅ Handle message delivered smoothly - no flashing
     const handleMessageDelivered = ({ messageId, conversationId, message }) => {
       if (!setConversations) return
       
@@ -281,7 +276,6 @@ const ChatList = ({
         
         const conv = { ...prev[convIndex] }
         
-        // ✅ Update just the status, don't replace the whole message
         if (conv.lastMessage && conv.lastMessage._id === messageId) {
           conv.lastMessage = {
             ...conv.lastMessage,
@@ -289,7 +283,6 @@ const ChatList = ({
           }
         }
         
-        // ✅ Don't change updatedAt to avoid reordering
         const newConversations = [...prev]
         newConversations[convIndex] = conv
         
@@ -297,7 +290,6 @@ const ChatList = ({
       })
     }
 
-    // ✅ Handle message read smoothly - no flashing
     const handleMessageRead = ({ messageId, conversationId, userId }) => {
       if (!setConversations) return
       if (userId === user?._id) return
@@ -344,7 +336,7 @@ const ChatList = ({
     }
   }, [socket, user, setConversations])
 
-  // ✅ Reorder conversations based on updatedAt - KEPT
+  // ✅ Reorder conversations based on updatedAt
   useEffect(() => {
     if (conversations && conversations.length > 0) {
       const sorted = [...conversations].sort((a, b) => {
@@ -358,10 +350,6 @@ const ChatList = ({
       }
     }
   }, [conversations, setConversations])
-
-  // ✅ REMOVED auto-refresh interval - was causing flashing
-  // The 3-second interval that was refreshing conversations was removed
-  // to prevent flashing. Socket events handle real-time updates.
 
   useEffect(() => {
     if (conversations && conversations.length > 0) {
@@ -501,10 +489,6 @@ const ChatList = ({
   const handleConversationClick = (conversation, event) => {
     if (event) {
       event.preventDefault()
-      // ✅ Only stop propagation if not in select mode
-      if (!isSelectMode) {
-        // Don't stop propagation - let the event bubble naturally
-      }
     }
     if (isSelectMode) {
       toggleConversationSelection(conversation._id)
@@ -565,13 +549,13 @@ const ChatList = ({
         const isNewMessage = conversation.lastMessage?.sender?._id !== user._id && unreadCount > 0
 
         return (
+          // ✅ FIXED: No stopPropagation to keep keyboard focus
           <div
             key={conversation._id}
             className={`flex items-center px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition border-b border-gray-100 dark:border-gray-800 relative ${
               isActive ? 'bg-gray-100 dark:bg-gray-800' : ''
             } ${isSelected ? 'bg-gray-100 dark:bg-gray-800' : ''}`}
             onClick={(e) => handleConversationClick(conversation, e)}
-            // ✅ FIXED: Only prevent default, don't stop propagation
             onTouchStart={(e) => {
               // Only prevent default if in select mode
               if (isSelectMode) {
@@ -579,10 +563,8 @@ const ChatList = ({
               }
             }}
             onTouchEnd={(e) => {
-              // Only handle if not in select mode and not a search result click
               if (!isSelectMode) {
                 e.preventDefault()
-                // Don't stop propagation - allow keyboard to stay focused
                 handleConversationClick(conversation, e)
               }
             }}
