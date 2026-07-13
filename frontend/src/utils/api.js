@@ -4,11 +4,12 @@ import axios from 'axios';
 const API_URL = import.meta.env.VITE_API_URL || '';
 console.log('🔍 API URL:', API_URL);
 
-// ✅ If no API URL is set, use relative path (for local development)
-const baseURL = API_URL || '/api';
+// ✅ IMPORTANT: Add /api to the base URL
+const baseURL = API_URL ? `${API_URL}/api` : '/api';
+console.log('🔍 Base URL with /api:', baseURL);
 
 const api = axios.create({
-  baseURL: baseURL,
+  baseURL: baseURL,  // ✅ Now this will be: https://.../api
   headers: {
     'Content-Type': 'application/json',
   },
