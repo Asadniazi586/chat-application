@@ -1269,7 +1269,7 @@ const MobileChatList = () => {
         />
       </div>
 
-     {/* ✅ BOTTOM NAVIGATION - FIXED with more padding */}
+{/* ✅ BOTTOM NAVIGATION - FIXED with extra padding */}
 <div className="bottom-nav">
   {bottomNavItems.map((item) => {
     const Icon = item.icon
@@ -1280,9 +1280,18 @@ const MobileChatList = () => {
       <button
         key={item.id}
         onClick={item.onClick}
-        className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-0.5 transition min-w-[44px] sm:min-w-[60px] touch-manipulation ${
-          isActive ? 'text-white' : 'text-white/60'
-        }`}
+        className="bottom-nav-item flex flex-col items-center gap-0.5 px-2 sm:px-4 py-0.5 transition touch-manipulation"
+        style={{
+          minWidth: '48px',
+          minHeight: '48px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '4px 8px',
+          touchAction: 'manipulation',
+          color: isActive ? 'white' : 'rgba(255,255,255,0.6)'
+        }}
       >
         {isAvatar ? (
           <img

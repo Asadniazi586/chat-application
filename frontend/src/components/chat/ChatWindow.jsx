@@ -696,10 +696,20 @@ const ChatWindow = ({
     ? pinnedMessages[pinnedIndex % pinnedMessages.length] 
     : null
 
-  return (
-  <div className="chat-window-wrapper flex-1 flex flex-col h-full w-full bg-gray-50 dark:bg-[#0B141A] overflow-hidden" style={{ height: '100%', minHeight: '100vh', minHeight: '-webkit-fill-available', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-    {/* ✅ Chat Header - Mobile Responsive */}
-    <div className="flex-shrink-0 relative">
+return (
+  <div className="chat-container flex-1 flex flex-col h-full w-full bg-gray-50 dark:bg-[#0B141A] overflow-hidden" style={{ 
+    height: '100%', 
+    minHeight: '100vh', 
+    minHeight: '-webkit-fill-available', 
+    transform: 'translateZ(0)', 
+    WebkitTransform: 'translateZ(0)', 
+    backfaceVisibility: 'hidden', 
+    WebkitBackfaceVisibility: 'hidden',
+    willChange: 'transform',
+    position: 'relative'
+  }}>
+    {/* ✅ Chat Header */}
+    <div className="flex-shrink-0 relative z-10">
       <ChatHeader 
         conversation={conversation} 
         onBack={onBack}
@@ -747,7 +757,7 @@ const ChatWindow = ({
       />
     </div>
 
-    {/* ✅ Reply To Preview - Mobile Responsive */}
+    {/* ✅ Reply To Preview */}
     {replyToMessage && (
       <div className="flex-shrink-0 bg-gray-100 dark:bg-gray-800 px-3 sm:px-4 py-1.5 sm:py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
@@ -765,7 +775,7 @@ const ChatWindow = ({
       </div>
     )}
 
-    {/* ✅ Connection Status - Mobile Responsive */}
+    {/* ✅ Connection Status */}
     <div className={`flex-shrink-0 px-2 sm:px-4 py-0.5 sm:py-1 text-[9px] sm:text-xs text-center border-b ${
       isConnected 
         ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800' 
@@ -774,7 +784,7 @@ const ChatWindow = ({
       {isConnected ? '🟢 Connected to server' : '🔴 Disconnected from server'}
     </div>
 
-    {/* ✅ Pinned Message - Mobile Responsive */}
+    {/* ✅ Pinned Message */}
     {pinnedMessages.length > 0 && currentPinnedMessage && (
       <div 
         className="flex-shrink-0 bg-white dark:bg-[#1A2A32] border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition"
@@ -794,7 +804,7 @@ const ChatWindow = ({
       </div>
     )}
 
-    {/* ✅ Messages Container - FIXED */}
+    {/* ✅ Messages Container - FIXED with extra padding */}
     <div 
       ref={messagesContainerRef}
       className="messages-container overflow-y-auto px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 space-y-1.5 sm:space-y-2 bg-[#ECE5DD] dark:bg-[#0B141A]"
@@ -805,6 +815,8 @@ const ChatWindow = ({
         touchAction: 'pan-y',
         transform: 'translateZ(0)',
         WebkitTransform: 'translateZ(0)',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
       }}
     >
       {loading ? (
@@ -877,8 +889,8 @@ const ChatWindow = ({
       )}
     </div>
 
-    {/* ✅ Message Input */}
-    <div className="flex-shrink-0" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 4px)' }}>
+    {/* ✅ Message Input - FIXED with padding */}
+    <div className="message-input-wrapper flex-shrink-0">
       <MessageInput 
         onSendMessage={handleSendMessage}
         onTyping={handleTyping}
