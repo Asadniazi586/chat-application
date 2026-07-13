@@ -697,205 +697,207 @@ const ChatWindow = ({
     : null
 
   return (
-    <div className="flex-1 flex flex-col h-full w-full bg-gray-50 dark:bg-[#0B141A] overflow-hidden" style={{ height: '100%', minHeight: '100vh', minHeight: '-webkit-fill-available' }}>
-      {/* ✅ Chat Header - Mobile Responsive */}
-      <div className="flex-shrink-0">
-        <ChatHeader 
-          conversation={conversation} 
-          onBack={onBack}
-          isOnline={isOnline}
-          otherUser={otherUser}
-          onProfileClick={handleContactProfileClick}
-          onClearChat={() => {
-            if (conversation) {
-              api.delete(`/users/clear-chat/${conversation._id}`)
-                .then(() => {
-                  setMessages([])
-                  toast.success('Chat cleared successfully')
-                })
-                .catch((error) => {
-                  console.error('Clear chat error:', error)
-                  toast.error('Failed to clear chat')
-                })
-            }
-          }}
-          onBlockUser={() => {
-            if (otherUser) {
-              api.post('/users/block', { userId: otherUser._id })
-                .then(() => {
-                  toast.success(`${otherUser.name} blocked successfully`)
-                })
-                .catch((error) => {
-                  console.error('Block error:', error)
-                  toast.error('Failed to block user')
-                })
-            }
-          }}
-          onUnblockUser={() => {
-            if (otherUser) {
-              api.post('/users/unblock', { userId: otherUser._id })
-                .then(() => {
-                  toast.success(`${otherUser.name} unblocked successfully`)
-                })
-                .catch((error) => {
-                  console.error('Unblock error:', error)
-                  toast.error('Failed to unblock user')
-                })
-            }
-          }}
-          isBlocked={otherUser?.blockedUsers?.includes(user?._id) || false}
-        />
-      </div>
+  <div className="chat-window-wrapper flex-1 flex flex-col h-full w-full bg-gray-50 dark:bg-[#0B141A] overflow-hidden" style={{ height: '100%', minHeight: '100vh', minHeight: '-webkit-fill-available', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+    {/* ✅ Chat Header - Mobile Responsive */}
+    <div className="flex-shrink-0 relative">
+      <ChatHeader 
+        conversation={conversation} 
+        onBack={onBack}
+        isOnline={isOnline}
+        otherUser={otherUser}
+        onProfileClick={handleContactProfileClick}
+        onClearChat={() => {
+          if (conversation) {
+            api.delete(`/users/clear-chat/${conversation._id}`)
+              .then(() => {
+                setMessages([])
+                toast.success('Chat cleared successfully')
+              })
+              .catch((error) => {
+                console.error('Clear chat error:', error)
+                toast.error('Failed to clear chat')
+              })
+          }
+        }}
+        onBlockUser={() => {
+          if (otherUser) {
+            api.post('/users/block', { userId: otherUser._id })
+              .then(() => {
+                toast.success(`${otherUser.name} blocked successfully`)
+              })
+              .catch((error) => {
+                console.error('Block error:', error)
+                toast.error('Failed to block user')
+              })
+          }
+        }}
+        onUnblockUser={() => {
+          if (otherUser) {
+            api.post('/users/unblock', { userId: otherUser._id })
+              .then(() => {
+                toast.success(`${otherUser.name} unblocked successfully`)
+              })
+              .catch((error) => {
+                console.error('Unblock error:', error)
+                toast.error('Failed to unblock user')
+              })
+          }
+        }}
+        isBlocked={otherUser?.blockedUsers?.includes(user?._id) || false}
+      />
+    </div>
 
-      {/* ✅ Reply To Preview - Mobile Responsive */}
-      {replyToMessage && (
-        <div className="flex-shrink-0 bg-gray-100 dark:bg-gray-800 px-3 sm:px-4 py-1.5 sm:py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">↩️</span>
-            <span className="text-[10px] sm:text-xs text-gray-700 dark:text-gray-300 truncate">
-              {replyToMessage.content}
-            </span>
-          </div>
-          <button
-            onClick={() => setReplyToMessage(null)}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition flex-shrink-0 ml-1 sm:ml-2 p-0.5"
-          >
-            <X size={14} className="sm:size-16" />
-          </button>
+    {/* ✅ Reply To Preview - Mobile Responsive */}
+    {replyToMessage && (
+      <div className="flex-shrink-0 bg-gray-100 dark:bg-gray-800 px-3 sm:px-4 py-1.5 sm:py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+          <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">↩️</span>
+          <span className="text-[10px] sm:text-xs text-gray-700 dark:text-gray-300 truncate">
+            {replyToMessage.content}
+          </span>
         </div>
-      )}
-
-      {/* ✅ Connection Status - Mobile Responsive */}
-      <div className={`flex-shrink-0 px-2 sm:px-4 py-0.5 sm:py-1 text-[9px] sm:text-xs text-center border-b ${
-        isConnected 
-          ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800' 
-          : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
-      }`}>
-        {isConnected ? '🟢 Connected to server' : '🔴 Disconnected from server'}
-      </div>
-
-      {/* ✅ Pinned Message - Mobile Responsive */}
-      {pinnedMessages.length > 0 && currentPinnedMessage && (
-        <div 
-          className="flex-shrink-0 bg-white dark:bg-[#1A2A32] border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-          onClick={handlePinnedClick}
+        <button
+          onClick={() => setReplyToMessage(null)}
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition flex-shrink-0 ml-1 sm:ml-2 p-0.5"
         >
-          <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5">
-            <Pin size={12} className="sm:size-14 text-[#25D366] fill-[#25D366] flex-shrink-0" />
-            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate flex-1">
-              {currentPinnedMessage.content?.substring(0, 40)}
-              {currentPinnedMessage.content?.length > 40 ? '...' : ''}
-            </span>
-            <span className="text-[9px] sm:text-xs text-[#25D366] ml-auto flex-shrink-0">
-              {pinnedIndex % pinnedMessages.length + 1}/{pinnedMessages.length}
-            </span>
-          </div>
-          <div className="h-0.5 bg-[#25D366] w-full" />
-        </div>
-      )}
-
-     {/* ✅ Messages Container - FIXED */}
-<div 
-  ref={messagesContainerRef}
-  className="messages-container overflow-y-auto px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 space-y-1.5 sm:space-y-2 bg-[#ECE5DD] dark:bg-[#0B141A]"
-  id="messages-container"
-  style={{
-    WebkitOverflowScrolling: 'touch',
-    overscrollBehavior: 'contain',
-    touchAction: 'pan-y',
-  }}
->
-  {loading ? (
-    <div className="flex justify-center items-center h-full">
-      <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-[#25D366]" />
-    </div>
-  ) : (
-    <>
-      {messages && messages.length === 0 && (
-        <div className="flex justify-center my-6 sm:my-8">
-          <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
-            No messages yet. Say hello! 👋
-          </p>
-        </div>
-      )}
-      {messages && messages.map((message, index) => {
-        const isOwn = message.sender?._id === user?._id
-        const isPinned = isMessagePinned(message._id)
-        const showDate = index === 0 || 
-          new Date(message.createdAt).toDateString() !== 
-          new Date(messages[index - 1]?.createdAt).toDateString()
-
-        return (
-          <React.Fragment key={message._id || index}>
-            {showDate && (
-              <div className="flex justify-center my-1.5 sm:my-2">
-                <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
-                  {new Date(message.createdAt).toLocaleDateString([], { 
-                    weekday: 'long', 
-                    month: 'short', 
-                    day: 'numeric' 
-                  })}
-                </span>
-              </div>
-            )}
-            <div id={`msg-${message._id}`} className="w-full">
-              <MessageBubble 
-                message={message} 
-                isOwn={isOwn}
-                onDelete={handleDeleteMessage}
-                onEdit={handleEditMessage}
-                onForward={handleForwardMessage}
-                onReply={handleReply}
-                onPin={handlePin}
-                isPinned={isPinned}
-                onReact={handleReaction}
-              />
-            </div>
-          </React.Fragment>
-        )
-      })}
-      
-      {/* ✅ Typing Indicator */}
-      {typingUsers.length > 0 && (
-        <div className="flex items-start ml-1 sm:ml-2">
-          <div className="bg-white dark:bg-[#1A2A32] rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 shadow-sm">
-            <div className="flex space-x-1">
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" />
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* ✅ Extra bottom spacing */}
-      <div className="h-20 sm:h-24" />
-      <div ref={messagesEndRef} />
-    </>
-  )}
-</div>
-
-      {/* ✅ Message Input */}
-      <div className="flex-shrink-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        <MessageInput 
-          onSendMessage={handleSendMessage}
-          onTyping={handleTyping}
-          replyTo={replyToMessage}
-          onCancelReply={() => setReplyToMessage(null)}
-        />
+          <X size={14} className="sm:size-16" />
+        </button>
       </div>
+    )}
 
-      {/* ✅ Forward Modal */}
-      {showForwardModal && forwardMessageData && (
-        <ForwardModal 
-          message={forwardMessageData}
-          onClose={() => setShowForwardModal(false)}
-          onForward={handleForwardComplete}
-          setConversations={setConversations}
-        />
+    {/* ✅ Connection Status - Mobile Responsive */}
+    <div className={`flex-shrink-0 px-2 sm:px-4 py-0.5 sm:py-1 text-[9px] sm:text-xs text-center border-b ${
+      isConnected 
+        ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800' 
+        : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
+    }`}>
+      {isConnected ? '🟢 Connected to server' : '🔴 Disconnected from server'}
+    </div>
+
+    {/* ✅ Pinned Message - Mobile Responsive */}
+    {pinnedMessages.length > 0 && currentPinnedMessage && (
+      <div 
+        className="flex-shrink-0 bg-white dark:bg-[#1A2A32] border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+        onClick={handlePinnedClick}
+      >
+        <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5">
+          <Pin size={12} className="sm:size-14 text-[#25D366] fill-[#25D366] flex-shrink-0" />
+          <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate flex-1">
+            {currentPinnedMessage.content?.substring(0, 40)}
+            {currentPinnedMessage.content?.length > 40 ? '...' : ''}
+          </span>
+          <span className="text-[9px] sm:text-xs text-[#25D366] ml-auto flex-shrink-0">
+            {pinnedIndex % pinnedMessages.length + 1}/{pinnedMessages.length}
+          </span>
+        </div>
+        <div className="h-0.5 bg-[#25D366] w-full" />
+      </div>
+    )}
+
+    {/* ✅ Messages Container - FIXED */}
+    <div 
+      ref={messagesContainerRef}
+      className="messages-container overflow-y-auto px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 space-y-1.5 sm:space-y-2 bg-[#ECE5DD] dark:bg-[#0B141A]"
+      id="messages-container"
+      style={{
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'contain',
+        touchAction: 'pan-y',
+        transform: 'translateZ(0)',
+        WebkitTransform: 'translateZ(0)',
+      }}
+    >
+      {loading ? (
+        <div className="flex justify-center items-center h-full">
+          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-[#25D366]" />
+        </div>
+      ) : (
+        <>
+          {messages && messages.length === 0 && (
+            <div className="flex justify-center my-6 sm:my-8">
+              <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+                No messages yet. Say hello! 👋
+              </p>
+            </div>
+          )}
+          {messages && messages.map((message, index) => {
+            const isOwn = message.sender?._id === user?._id
+            const isPinned = isMessagePinned(message._id)
+            const showDate = index === 0 || 
+              new Date(message.createdAt).toDateString() !== 
+              new Date(messages[index - 1]?.createdAt).toDateString()
+
+            return (
+              <React.Fragment key={message._id || index}>
+                {showDate && (
+                  <div className="flex justify-center my-1.5 sm:my-2">
+                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
+                      {new Date(message.createdAt).toLocaleDateString([], { 
+                        weekday: 'long', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      })}
+                    </span>
+                  </div>
+                )}
+                <div id={`msg-${message._id}`} className="w-full">
+                  <MessageBubble 
+                    message={message} 
+                    isOwn={isOwn}
+                    onDelete={handleDeleteMessage}
+                    onEdit={handleEditMessage}
+                    onForward={handleForwardMessage}
+                    onReply={handleReply}
+                    onPin={handlePin}
+                    isPinned={isPinned}
+                    onReact={handleReaction}
+                  />
+                </div>
+              </React.Fragment>
+            )
+          })}
+          
+          {/* ✅ Typing Indicator */}
+          {typingUsers.length > 0 && (
+            <div className="flex items-start ml-1 sm:ml-2">
+              <div className="bg-white dark:bg-[#1A2A32] rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 shadow-sm">
+                <div className="flex space-x-1">
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" />
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* ✅ Extra bottom spacing */}
+          <div className="h-20 sm:h-24" />
+          <div ref={messagesEndRef} />
+        </>
       )}
     </div>
-  )
+
+    {/* ✅ Message Input */}
+    <div className="flex-shrink-0" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 4px)' }}>
+      <MessageInput 
+        onSendMessage={handleSendMessage}
+        onTyping={handleTyping}
+        replyTo={replyToMessage}
+        onCancelReply={() => setReplyToMessage(null)}
+      />
+    </div>
+
+    {/* ✅ Forward Modal */}
+    {showForwardModal && forwardMessageData && (
+      <ForwardModal 
+        message={forwardMessageData}
+        onClose={() => setShowForwardModal(false)}
+        onForward={handleForwardComplete}
+        setConversations={setConversations}
+      />
+    )}
+  </div>
+)
 }
 
 export default ChatWindow

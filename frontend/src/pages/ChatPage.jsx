@@ -1269,41 +1269,41 @@ const MobileChatList = () => {
         />
       </div>
 
-      {/* ✅ BOTTOM NAVIGATION - FIXED */}
-      <div className="bottom-nav">
-        {bottomNavItems.map((item) => {
-          const Icon = item.icon
-          const isActive = activeTab === item.id
-          const isAvatar = item.isAvatar
-          
-          return (
-            <button
-              key={item.id}
-              onClick={item.onClick}
-              className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-0.5 transition min-w-[44px] sm:min-w-[60px] touch-manipulation ${
-                isActive ? 'text-white' : 'text-white/60'
-              }`}
-            >
-              {isAvatar ? (
-                <img
-                  src={avatarUrl}
-                  alt="You"
-                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 ${
-                    isActive ? 'border-white' : 'border-white/30'
-                  }`}
-                  onError={(e) => {
-                    e.target.onerror = null
-                    e.target.src = `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=25D366&color=fff&size=24`
-                  }}
-                />
-              ) : (
-                <Icon size={20} className="sm:size-22" />
-              )}
-              <span className="text-[8px] sm:text-[10px] leading-3 font-medium">{item.label}</span>
-            </button>
-          )
-        })}
-      </div>
+     {/* ✅ BOTTOM NAVIGATION - FIXED with more padding */}
+<div className="bottom-nav">
+  {bottomNavItems.map((item) => {
+    const Icon = item.icon
+    const isActive = activeTab === item.id
+    const isAvatar = item.isAvatar
+    
+    return (
+      <button
+        key={item.id}
+        onClick={item.onClick}
+        className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-0.5 transition min-w-[44px] sm:min-w-[60px] touch-manipulation ${
+          isActive ? 'text-white' : 'text-white/60'
+        }`}
+      >
+        {isAvatar ? (
+          <img
+            src={avatarUrl}
+            alt="You"
+            className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 ${
+              isActive ? 'border-white' : 'border-white/30'
+            }`}
+            onError={(e) => {
+              e.target.onerror = null
+              e.target.src = `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=25D366&color=fff&size=24`
+            }}
+          />
+        ) : (
+          <Icon size={20} className="sm:size-22" />
+        )}
+        <span className="text-[8px] sm:text-[10px] leading-3 font-medium">{item.label}</span>
+      </button>
+    )
+  })}
+</div>
     </div>
   )
 }

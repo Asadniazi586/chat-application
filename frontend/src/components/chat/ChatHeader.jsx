@@ -246,43 +246,55 @@ const ChatHeader = ({
           <MoreVertical size={18} className="sm:size-20" />
         </button>
         
-        {/* ✅ Dropdown Menu - Responsive */}
-        {showDropdown && (
-          <div 
-            ref={dropdownRef}
-            className="absolute top-full right-0 mt-1 sm:mt-2 bg-white dark:bg-[#1A2A32] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[160px] sm:min-w-[200px] z-50 py-1"
-            // ✅ Prevent touch events from dismissing keyboard
-            onTouchStart={(e) => e.stopPropagation()}
-            onTouchEnd={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => {
-                setShowDropdown(false)
-                onProfileClick?.(other)
-              }}
-              className="flex items-center gap-2.5 sm:gap-3 w-full px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-            >
-              <Info size={15} className="sm:size-16" />
-              View Contact
-            </button>
-            <button
-              onClick={handleClearChat}
-              className="flex items-center gap-2.5 sm:gap-3 w-full px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-            >
-              <Trash2 size={15} className="sm:size-16" />
-              Clear Chat
-            </button>
-            {other && (
-              <button
-                onClick={handleBlockToggle}
-                className="flex items-center gap-2.5 sm:gap-3 w-full px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition border-t border-gray-200 dark:border-gray-700"
-              >
-                <AlertCircle size={15} className="sm:size-16" />
-                {isBlocked ? `Unblock ${other.name}` : `Block ${other.name}`}
-              </button>
-            )}
-          </div>
-        )}
+      {/* ✅ Dropdown Menu - FIXED with proper positioning */}
+{showDropdown && (
+  <div 
+    ref={dropdownRef}
+    className="chat-header-dropdown"
+    style={{
+      position: 'absolute',
+      top: '100%',
+      right: '0',
+      marginTop: '4px',
+      background: 'white',
+      borderRadius: '12px',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+      minWidth: '180px',
+      zIndex: 100,
+      overflow: 'visible',
+      padding: '4px 0'
+    }}
+    onTouchStart={(e) => e.stopPropagation()}
+    onTouchEnd={(e) => e.stopPropagation()}
+  >
+    <button
+      onClick={() => {
+        setShowDropdown(false)
+        onProfileClick?.(other)
+      }}
+      className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+    >
+      <Info size={16} />
+      View Contact
+    </button>
+    <button
+      onClick={handleClearChat}
+      className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+    >
+      <Trash2 size={16} />
+      Clear Chat
+    </button>
+    {other && (
+      <button
+        onClick={handleBlockToggle}
+        className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition border-t border-gray-200 dark:border-gray-700"
+      >
+        <AlertCircle size={16} />
+        {isBlocked ? `Unblock ${other.name}` : `Block ${other.name}`}
+      </button>
+    )}
+  </div>
+)}
       </div>
     </div>
   )

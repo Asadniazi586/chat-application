@@ -88,7 +88,7 @@ body {
 }
 
 /* ============================================
-   ✅ BOTTOM NAV FIX
+   ✅ BOTTOM NAV FIX - More padding
    ============================================ */
 .bottom-nav {
   position: relative !important;
@@ -98,9 +98,9 @@ body {
   z-index: 10 !important;
   background: #075E54 !important;
   flex-shrink: 0 !important;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
-  padding-top: 6px !important;
-  min-height: 56px !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px) !important;
+  padding-top: 8px !important;
+  min-height: 64px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-around !important;
@@ -109,7 +109,7 @@ body {
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .bottom-nav {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px) !important;
   }
 }
 
@@ -118,21 +118,87 @@ body {
 }
 
 /* ============================================
-   ✅ CHAT MESSAGES FIX
+   ✅ CHAT MESSAGES FIX - More bottom padding
    ============================================ */
 .messages-container {
   flex: 1 1 auto !important;
   min-height: 0 !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 100px) !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 140px) !important;
   position: relative !important;
 }
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .messages-container {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 120px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 160px) !important;
   }
+}
+
+/* ============================================
+   ✅ CHAT HEADER DROPDOWN FIX
+   ============================================ */
+.chat-header-dropdown {
+  position: absolute !important;
+  top: 100% !important;
+  right: 0 !important;
+  margin-top: 4px !important;
+  background: white !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+  min-width: 180px !important;
+  z-index: 100 !important;
+  overflow: visible !important;
+  padding: 4px 0 !important;
+}
+
+[data-theme="dark"] .chat-header-dropdown {
+  background: #1A2A32 !important;
+  border: 1px solid #2A3942 !important;
+}
+
+.chat-header-dropdown button {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  padding: 10px 16px !important;
+  font-size: 13px !important;
+  color: #374151 !important;
+  transition: background 0.15s !important;
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+}
+
+[data-theme="dark"] .chat-header-dropdown button {
+  color: #E9EDEF !important;
+}
+
+.chat-header-dropdown button:hover {
+  background: #F3F4F6 !important;
+}
+
+[data-theme="dark"] .chat-header-dropdown button:hover {
+  background: #2A3942 !important;
+}
+
+.chat-header-dropdown .danger-btn {
+  color: #EF4444 !important;
+}
+
+[data-theme="dark"] .chat-header-dropdown .danger-btn {
+  color: #F87171 !important;
+}
+
+.chat-header-dropdown .divider {
+  height: 1px !important;
+  background: #E5E7EB !important;
+  margin: 4px 0 !important;
+}
+
+[data-theme="dark"] .chat-header-dropdown .divider {
+  background: #2A3942 !important;
 }
 
 /* ============================================
@@ -154,6 +220,17 @@ input, textarea, select, button {
 input:focus, textarea:focus {
   font-size: 16px !important;
   outline: none;
+}
+
+/* ============================================
+   ✅ PREVENT ZOOM/BLINK ON MOBILE
+   ============================================ */
+.chat-window-container {
+  height: 100% !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  position: relative !important;
+  -webkit-overflow-scrolling: touch !important;
 }
 
 /* ============================================
@@ -411,4 +488,18 @@ input:focus, textarea:focus {
    ============================================ */
 .overflow-hidden {
   overflow: hidden !important;
+}
+
+/* ============================================
+   ✅ PREVENT ZOOM ON CHAT WINDOW
+   ============================================ */
+.chat-window-wrapper {
+  height: 100% !important;
+  width: 100% !important;
+  position: relative !important;
+  overflow: hidden !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
 }
