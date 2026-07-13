@@ -6,13 +6,11 @@
    CUSTOM PROPERTIES (CSS Variables)
    ============================================ */
 :root {
-  /* WhatsApp Colors */
   --whatsapp-green: #25D366;
   --whatsapp-dark: #075E54;
   --whatsapp-light: #DCF8C6;
   --whatsapp-bg: #ECE5DD;
   
-  /* Light Mode */
   --bg-primary: #ECE5DD;
   --bg-secondary: #FFFFFF;
   --bg-header: #075E54;
@@ -23,13 +21,11 @@
   --text-header: #FFFFFF;
   --border-color: #E9EDEF;
   
-  /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
   --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
   --shadow-lg: 0 10px 25px rgba(0,0,0,0.15);
 }
 
-/* Dark Mode Variables */
 [data-theme="dark"] {
   --bg-primary: #0B141A;
   --bg-secondary: #1A2A32;
@@ -43,7 +39,7 @@
 }
 
 /* ============================================
-   GLOBAL RESET & BASE - FIXED for mobile
+   GLOBAL RESET & BASE - FIXED FOR MOBILE
    ============================================ */
 * {
   margin: 0;
@@ -51,7 +47,19 @@
   box-sizing: border-box;
 }
 
-html, body, #root {
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  -webkit-text-size-adjust: 100%;
+}
+
+#root {
   height: 100%;
   width: 100%;
   overflow: hidden;
@@ -67,26 +75,55 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: background-color 0.3s, color 0.3s;
+}
+
+/* ============================================
+   MOBILE VIEWPORT FIXES
+   ============================================ */
+@supports (-webkit-touch-callout: none) {
+  html, body, #root {
+    height: -webkit-fill-available;
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* ============================================
+   SAFE AREA PADDING
+   ============================================ */
+.safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* ✅ Ensure proper height on mobile */
-.h-full {
-  height: 100%;
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 12px);
+  }
 }
 
-/* ✅ Fix for flex containers on mobile */
-.flex-col {
-  min-height: 0;
+/* ============================================
+   PREVENT ZOOM ON INPUT FOCUS
+   ============================================ */
+input, textarea, select, button {
+  font-size: 16px !important;
+}
+
+input:focus, textarea:focus {
+  font-size: 16px !important;
+  outline: none;
+}
+
+/* ============================================
+   TOUCH MANIPULATION
+   ============================================ */
+.touch-manipulation {
+  touch-action: manipulation;
 }
 
 /* ============================================
    SCROLLBAR STYLING
    ============================================ */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -105,8 +142,6 @@ body {
 /* ============================================
    CUSTOM UTILITY CLASSES
    ============================================ */
-
-/* WhatsApp Green Button */
 .btn-whatsapp {
   background-color: var(--whatsapp-green);
   color: white;
@@ -129,7 +164,6 @@ body {
   transform: none;
 }
 
-/* Chat Bubble Animations */
 @keyframes slideIn {
   from {
     opacity: 0;
@@ -145,7 +179,6 @@ body {
   animation: slideIn 0.3s ease-out forwards;
 }
 
-/* Typing Indicator Animation */
 @keyframes typingBounce {
   0%, 60%, 100% {
     transform: translateY(0);
@@ -172,7 +205,6 @@ body {
   animation-delay: 0.4s;
 }
 
-/* Online Status Pulse */
 @keyframes onlinePulse {
   0% {
     box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.4);
@@ -189,7 +221,6 @@ body {
   animation: onlinePulse 2s infinite;
 }
 
-/* Message Status Icons */
 .status-sent {
   color: #8696A0;
 }
@@ -202,13 +233,11 @@ body {
   color: #53BDEB;
 }
 
-/* Image Preview Overlay */
 .image-preview-overlay {
   background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(10px);
 }
 
-/* Loading Shimmer Effect */
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -312,45 +341,47 @@ body {
 }
 
 /* ============================================
-   ✅ SAFE AREA PADDING FOR MOBILE DEVICES
+   ✅ KEYBOARD FIX FOR SEARCH
    ============================================ */
-.pb-safe {
+.search-input {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+
+/* ============================================
+   ✅ BOTTOM NAV FIX
+   ============================================ */
+.bottom-nav {
+  position: relative;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: var(--bg-header);
+  flex-shrink: 0;
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* ============================================
-   ✅ PREVENT ZOOM ON INPUT FOCUS FOR MOBILE
-   ============================================ */
-input, textarea {
-  font-size: 16px !important;
-}
-
-input:focus, textarea:focus {
-  font-size: 16px !important;
-}
-
-/* ============================================
-   ✅ TOUCH MANIPULATION FOR BETTER MOBILE INTERACTION
-   ============================================ */
-.touch-manipulation {
-  touch-action: manipulation;
-}
-
-/* ============================================
-   ✅ BOTTOM NAV SAFE AREA FOR IPHONE
-   ============================================ */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 12px);
+  .bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom, 8px);
   }
 }
 
 /* ============================================
-   ✅ ENSURE CONTENT IS VISIBLE ON MOBILE
+   ✅ CHAT MESSAGES FIX
    ============================================ */
-@supports (-webkit-touch-callout: none) {
-  .h-full {
-    height: -webkit-fill-available;
+.messages-container {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .messages-container {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
   }
 }
 
@@ -359,4 +390,26 @@ input:focus, textarea:focus {
    ============================================ */
 .overflow-hidden {
   overflow: hidden !important;
+}
+
+/* ============================================
+   ✅ ENSURE FLEX LAYOUT WORKS ON MOBILE
+   ============================================ */
+.flex-col {
+  min-height: 0;
+}
+
+.h-full {
+  height: 100%;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+/* ============================================
+   ✅ IOS SAFARI SPECIFIC FIXES
+   ============================================ */
+@supports (-webkit-touch-callout: none) {
+  .h-full {
+    height: -webkit-fill-available;
+  }
 }

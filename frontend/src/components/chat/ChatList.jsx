@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useSocket } from '../../hooks/useSocket'
 import { CheckCheck, MessageCircle, CheckSquare, Square, Pin, Clock } from 'lucide-react'
-import axios from 'axios'
 import api from '../../utils/api'
 
 const ChatList = ({ 
@@ -549,7 +548,6 @@ const ChatList = ({
         const isNewMessage = conversation.lastMessage?.sender?._id !== user._id && unreadCount > 0
 
         return (
-          // ✅ FIXED: No stopPropagation to keep keyboard focus
           <div
             key={conversation._id}
             className={`flex items-center px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition border-b border-gray-100 dark:border-gray-800 relative ${
@@ -557,7 +555,6 @@ const ChatList = ({
             } ${isSelected ? 'bg-gray-100 dark:bg-gray-800' : ''}`}
             onClick={(e) => handleConversationClick(conversation, e)}
             onTouchStart={(e) => {
-              // Only prevent default if in select mode
               if (isSelectMode) {
                 e.preventDefault()
               }

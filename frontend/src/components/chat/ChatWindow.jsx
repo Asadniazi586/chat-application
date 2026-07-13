@@ -401,14 +401,12 @@ const ChatWindow = ({
     const handleNewMessage = (message) => {
       console.log('📩 ChatWindow new-message:', message)
       setMessages(prev => {
-        // ✅ Replace temp message with real message smoothly (no flashing)
         const tempIndex = prev.findIndex(msg => 
           msg._id.startsWith('temp_') && msg.content === message.content
         )
         
         if (tempIndex !== -1) {
           const newMessages = [...prev]
-          // ✅ Replace with real message and preserve the same position
           newMessages[tempIndex] = {
             ...message,
             isTemp: false
@@ -522,26 +520,21 @@ const ChatWindow = ({
       })
     }
 
-    // ✅ FIXED: Update delivered status and also update sidebar
     const handleMessageDelivered = ({ messageId, conversationId, message }) => {
       console.log('📩 handleMessageDelivered INSTANT:', { messageId, conversationId })
       
-      // ✅ Update messages in chat with the updated message
       setMessages(prev => 
         prev.map(msg => {
           if (msg._id === messageId) {
-            // ✅ If we got the full updated message from backend, use it
             if (message) {
               return { ...message, isTemp: false }
             }
-            // ✅ Otherwise just update the status
             return { ...msg, status: 'delivered' }
           }
           return msg
         })
       )
       
-      // ✅ Also update conversation lastMessage status for sidebar
       if (onConversationUpdate && conversation) {
         const updatedConv = {
           ...conversation,
@@ -553,7 +546,6 @@ const ChatWindow = ({
       }
     }
 
-    // ✅ FIXED: Only mark messages as read when the OTHER user reads them
     const handleMessagesRead = ({ conversationId, userId }) => {
       console.log('📩 ChatWindow messages-read:', { conversationId, userId })
       
@@ -594,17 +586,14 @@ const ChatWindow = ({
 
     socket.on('new-message', handleNewMessage)
     socket.on('new-message-notification', handleNewMessageNotification)
-    // ✅ FIXED: Handle typing indicator with conversationId
     socket.on('user-typing', ({ conversationId, userId, isTyping }) => {
       console.log('📩 user-typing received in ChatWindow:', { conversationId, userId, isTyping, currentUser: user?._id })
       
-      // ✅ Skip if it's the current user's own typing event
       if (userId === user?._id) {
         console.log('⏭️ Skipping own typing event in ChatWindow')
         return
       }
       
-      // ✅ Only update if this conversation is currently open
       if (conversation?._id !== conversationId) {
         console.log('⏭️ Skipping typing event for different conversation')
         return
@@ -612,14 +601,12 @@ const ChatWindow = ({
       
       setTypingUsers(prev => {
         if (isTyping) {
-          // ✅ Add user to typing list if not already there
           if (!prev.includes(userId)) {
             console.log('✅ Adding user to typing list:', userId)
             return [...prev, userId]
           }
           return prev
         } else {
-          // ✅ Remove user from typing list
           console.log('✅ Removing user from typing list:', userId)
           return prev.filter(id => id !== userId)
         }
@@ -807,16 +794,15 @@ const ChatWindow = ({
         </div>
       )}
 
-      {/* ✅ Messages Container - FULLY MOBILE RESPONSIVE WITH BOTTOM PADDING */}
+      {/* ✅ Messages Container - FIXED */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 space-y-1.5 sm:space-y-2 bg-[#ECE5DD] dark:bg-[#0B141A]"
+        className="messages-container flex-1 overflow-y-auto px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 space-y-1.5 sm:space-y-2 bg-[#ECE5DD] dark:bg-[#0B141A]"
         id="messages-container"
         style={{
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'contain',
           touchAction: 'pan-y',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)'
         }}
       >
         {loading ? (
@@ -869,7 +855,7 @@ const ChatWindow = ({
               )
             })}
             
-            {/* ✅ Typing Indicator - Mobile Responsive */}
+            {/* ✅ Typing Indicator */}
             {typingUsers.length > 0 && (
               <div className="flex items-start ml-1 sm:ml-2">
                 <div className="bg-white dark:bg-[#1A2A32] rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 shadow-sm">
@@ -882,14 +868,14 @@ const ChatWindow = ({
               </div>
             )}
             
-            {/* ✅ Extra bottom spacing for messages */}
-            <div className="h-16 sm:h-20" />
+            {/* ✅ Extra bottom spacing */}
+            <div className="h-20 sm:h-24" />
             <div ref={messagesEndRef} />
           </>
         )}
       </div>
 
-      {/* ✅ Message Input - Mobile Responsive with safe area */}
+      {/* ✅ Message Input */}
       <div className="flex-shrink-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <MessageInput 
           onSendMessage={handleSendMessage}
@@ -899,7 +885,7 @@ const ChatWindow = ({
         />
       </div>
 
-      {/* ✅ Forward Modal - Mobile Responsive */}
+      {/* ✅ Forward Modal */}
       {showForwardModal && forwardMessageData && (
         <ForwardModal 
           message={forwardMessageData}

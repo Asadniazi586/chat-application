@@ -1034,7 +1034,7 @@ const ChatPage = () => {
     }
     
     return (
-      <div className="flex flex-col h-full bg-[#ECE5DD] dark:bg-[#0B141A]">
+      <div className="flex flex-col h-full bg-[#ECE5DD] dark:bg-[#0B141A]" style={{ height: '100%', minHeight: '100vh', minHeight: '-webkit-fill-available' }}>
         {/* ✅ Header - Responsive */}
         <div className="bg-[#075E54] dark:bg-[#1A2A32] px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between flex-shrink-0">
           <h1 className="text-white text-base sm:text-xl font-semibold">WhatsApp</h1>
@@ -1136,7 +1136,7 @@ const ChatPage = () => {
                 onTouchStart={(e) => e.stopPropagation()}
                 onTouchEnd={(e) => e.stopPropagation()}
                 placeholder="Search by name or email..."
-                className="flex-1 bg-transparent outline-none text-xs sm:text-sm dark:text-white placeholder-gray-400 min-w-0"
+                className="search-input flex-1 bg-transparent outline-none text-xs sm:text-sm dark:text-white placeholder-gray-400 min-w-0"
               />
               {searchQuery && (
                 <button
@@ -1271,7 +1271,7 @@ const ChatPage = () => {
         </div>
 
         {/* ✅ Chat List - Takes remaining space */}
-        <div className="flex-1 overflow-y-auto bg-white dark:bg-[#1A2A32]">
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-[#1A2A32]" style={{ flex: '1 1 auto', minHeight: 0 }}>
           <ChatList
             conversations={conversations}
             setConversations={setConversations}
@@ -1285,7 +1285,7 @@ const ChatPage = () => {
         </div>
 
         {/* ✅ BOTTOM NAVIGATION - FIXED with safe area */}
-        <div className="flex-shrink-0 bg-[#075E54] dark:bg-[#1A2A32] flex items-center justify-around py-2 sm:py-2.5 border-t border-white/10 pb-safe">
+        <div className="bottom-nav bg-[#075E54] dark:bg-[#1A2A32] flex items-center justify-around py-2 sm:py-2.5 border-t border-white/10">
           {bottomNavItems.map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
@@ -1295,7 +1295,7 @@ const ChatPage = () => {
               <button
                 key={item.id}
                 onClick={item.onClick}
-                className={`flex flex-col items-center gap-0.5 px-3 sm:px-4 py-1 transition min-w-[50px] sm:min-w-[60px] ${
+                className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-0.5 transition min-w-[44px] sm:min-w-[60px] touch-manipulation ${
                   isActive ? 'text-white' : 'text-white/60'
                 }`}
               >
@@ -1303,7 +1303,7 @@ const ChatPage = () => {
                   <img
                     src={avatarUrl}
                     alt="You"
-                    className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border-2 ${
+                    className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 ${
                       isActive ? 'border-white' : 'border-white/30'
                     }`}
                     onError={(e) => {
@@ -1312,9 +1312,9 @@ const ChatPage = () => {
                     }}
                   />
                 ) : (
-                  <Icon size={22} className="sm:size-24" />
+                  <Icon size={20} className="sm:size-22" />
                 )}
-                <span className="text-[9px] sm:text-[10px] leading-3 font-medium">{item.label}</span>
+                <span className="text-[8px] sm:text-[10px] leading-3 font-medium">{item.label}</span>
               </button>
             )
           })}
