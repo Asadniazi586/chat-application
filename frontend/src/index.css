@@ -1,0 +1,294 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   CUSTOM PROPERTIES (CSS Variables)
+   ============================================ */
+:root {
+  /* WhatsApp Colors */
+  --whatsapp-green: #25D366;
+  --whatsapp-dark: #075E54;
+  --whatsapp-light: #DCF8C6;
+  --whatsapp-bg: #ECE5DD;
+  
+  /* Light Mode */
+  --bg-primary: #ECE5DD;
+  --bg-secondary: #FFFFFF;
+  --bg-header: #075E54;
+  --bg-chat-self: #DCF8C6;
+  --bg-chat-other: #FFFFFF;
+  --text-primary: #000000;
+  --text-secondary: #667781;
+  --text-header: #FFFFFF;
+  --border-color: #E9EDEF;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+/* Dark Mode Variables */
+[data-theme="dark"] {
+  --bg-primary: #0B141A;
+  --bg-secondary: #1A2A32;
+  --bg-header: #1A2A32;
+  --bg-chat-self: #056162;
+  --bg-chat-other: #1A2A32;
+  --text-primary: #E9EDEF;
+  --text-secondary: #8696A0;
+  --text-header: #E9EDEF;
+  --border-color: #2A3942;
+}
+
+/* ============================================
+   GLOBAL RESET & BASE
+   ============================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* ============================================
+   CUSTOM UTILITY CLASSES
+   ============================================ */
+
+/* WhatsApp Green Button */
+.btn-whatsapp {
+  background-color: var(--whatsapp-green);
+  color: white;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-whatsapp:hover {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
+
+.btn-whatsapp:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Chat Bubble Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+/* Typing Indicator Animation */
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-10px);
+  }
+}
+
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #8696A0;
+  display: inline-block;
+  animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Online Status Pulse */
+@keyframes onlinePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(37, 211, 102, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+  }
+}
+
+.online-pulse {
+  animation: onlinePulse 2s infinite;
+}
+
+/* Message Status Icons */
+.status-sent {
+  color: #8696A0;
+}
+
+.status-delivered {
+  color: #8696A0;
+}
+
+.status-read {
+  color: #53BDEB;
+}
+
+/* Image Preview Overlay */
+.image-preview-overlay {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+}
+
+/* Loading Shimmer Effect */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+[data-theme="dark"] .shimmer {
+  background: linear-gradient(90deg, #2A3942 25%, #3A4A52 50%, #2A3942 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   ============================================ */
+@media (max-width: 768px) {
+  .sidebar-mobile {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    z-index: 50;
+    background: var(--bg-primary);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .sidebar-mobile.open {
+    transform: translateX(0);
+  }
+}
+
+/* ============================================
+   EMOJI PICKER CUSTOMIZATION
+   ============================================ */
+.emoji-picker {
+  --epr-bg-color: var(--bg-secondary) !important;
+  --epr-text-color: var(--text-primary) !important;
+  --epr-hover-bg-color: var(--border-color) !important;
+}
+
+/* ============================================
+   TOAST NOTIFICATIONS
+   ============================================ */
+.toast-success {
+  background: var(--whatsapp-green) !important;
+  color: white !important;
+}
+
+.toast-error {
+  background: #FF3B30 !important;
+  color: white !important;
+}
+
+/* ============================================
+   FILE INPUT HIDE
+   ============================================ */
+.file-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* ============================================
+   CHAT HEADER GRADIENT
+   ============================================ */
+.chat-header-gradient {
+  background: linear-gradient(135deg, var(--bg-header), var(--bg-secondary));
+}
+
+/* ============================================
+   MEDIA QUERIES FOR DARK MODE TOGGLE
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-primary: #0B141A;
+    --bg-secondary: #1A2A32;
+    --bg-header: #1A2A32;
+    --bg-chat-self: #056162;
+    --bg-chat-other: #1A2A32;
+    --text-primary: #E9EDEF;
+    --text-secondary: #8696A0;
+    --text-header: #E9EDEF;
+    --border-color: #2A3942;
+  }
+}

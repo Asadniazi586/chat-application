@@ -1,0 +1,683 @@
+import User from '../models/User.js';
+import Conversation from '../models/Conversation.js';
+import Message from '../models/Message.js';
+
+// Store online users
+const onlineUsers = new Map();
+
+export const socketHandler = (io) => {
+  io.on('connection', (socket) => {
+    console.log('🔌 New client connected:', socket.id);
+
+    // ✅ User comes online
+    socket.on('user-online', async (userId) => {
+      console.log(`👤 User ${userId} is online`);
+      onlineUsers.set(userId, socket.id);
+      
+      await User.findByIdAndUpdate(userId, {
+        status: 'online',
+        lastSeen: Date.now()
+      });
+
+      socket.broadcast.emit('user-status-change', {
+        userId,
+        status: 'online'
+      });
+    });
+
+    // ✅ User goes offline
+    socket.on('user-offline', async (userId) => {
+      console.log(`👤 User ${userId} is offline`);
+      onlineUsers.delete(userId);
+      
+      await User.findByIdAndUpdate(userId, {
+        status: 'offline',
+        lastSeen: Date.now()
+      });
+
+      socket.broadcast.emit('user-status-change', {
+        userId,
+        status: 'offline'
+      });
+    });
+
+    // ✅ Update about
+    socket.on('update-about', async (data) => {
+      try {
+        const { userId, about } = data;
+        
+        await User.findByIdAndUpdate(userId, { about });
+        
+        socket.broadcast.emit('about-updated', {
+          userId,
+          about
+        });
+        
+        console.log(`📝 About updated for user ${userId}: ${about}`);
+      } catch (error) {
+        console.error('Update about error:', error);
+      }
+    });
+
+    // ✅ Join conversation room
+    socket.on('join-conversation', (conversationId) => {
+      const roomName = `conversation-${conversationId}`;
+      socket.join(roomName);
+      console.log(`📚 Socket ${socket.id} joined room: ${roomName}`);
+      
+      const room = io.sockets.adapter.rooms.get(roomName);
+      const roomSize = room ? room.size : 0;
+      console.log(`📊 Room ${roomName} now has ${roomSize} clients`);
+      
+      socket.emit('room-info', { 
+        roomName, 
+        clientCount: roomSize 
+      });
+    });
+
+    // ✅ Leave conversation room
+    socket.on('leave-conversation', (conversationId) => {
+      const roomName = `conversation-${conversationId}`;
+      socket.leave(roomName);
+      console.log(`📚 Socket ${socket.id} left room: ${roomName}`);
+      
+      const room = io.sockets.adapter.rooms.get(roomName);
+      const roomSize = room ? room.size : 0;
+      console.log(`📊 Room ${roomName} now has ${roomSize} clients`);
+    });
+
+    // ✅ SEND MESSAGE - Fixed with immediate delivery status and database update
+    socket.on('send-message', async (data) => {
+      try {
+        console.log('📤 Backend received send-message:', data);
+        
+        const { conversationId, senderId, content, type = 'text', fileName, fileSize, replyTo } = data;
+
+        const conversation = await Conversation.findById(conversationId)
+          .populate('participants', '_id');
+        
+        if (!conversation) {
+          console.error('❌ Conversation not found:', conversationId);
+          socket.emit('message-error', { error: 'Conversation not found' });
+          return;
+        }
+
+        console.log('✅ Conversation found:', conversationId);
+        console.log('✅ Participants:', conversation.participants.map(p => p._id.toString()));
+
+        const participants = conversation.participants.map(p => p._id.toString());
+        const receiverId = participants.find(id => id !== senderId);
+        
+        if (receiverId) {
+          const receiver = await User.findById(receiverId);
+          if (receiver && receiver.blockedUsers && receiver.blockedUsers.includes(senderId)) {
+            console.log(`🚫 User ${senderId} is blocked by ${receiverId}`);
+            socket.emit('message-error', { 
+              error: 'You are blocked by this user' 
+            });
+            return;
+          }
+        }
+
+        const messageData = {
+          conversation: conversationId,
+          sender: senderId,
+          content,
+          type,
+          fileName: fileName || '',
+          fileSize: fileSize || 0,
+          status: 'sent'
+        };
+        
+        if (replyTo) {
+          messageData.replyTo = replyTo;
+        }
+
+        const newMessage = new Message(messageData);
+        await newMessage.save();
+        console.log('✅ Message saved to database:', newMessage._id);
+
+        await newMessage.populate('sender', 'name email avatar');
+        
+        if (replyTo) {
+          await newMessage.populate('replyTo', 'content sender');
+        }
+
+        await Conversation.findByIdAndUpdate(conversationId, {
+          lastMessage: newMessage._id,
+          lastMessageTime: newMessage.createdAt
+        });
+        console.log('✅ Conversation updated with last message');
+
+        const conversationWithParticipants = await Conversation.findById(conversationId)
+          .populate('participants', '_id');
+
+        const allParticipants = conversationWithParticipants.participants.map(p => p._id.toString());
+        const receiverIds = allParticipants.filter(id => id !== senderId);
+        console.log('✅ Receiver IDs:', receiverIds);
+
+        for (const receiverId of receiverIds) {
+          const conversationDoc = await Conversation.findById(conversationId);
+          if (!conversationDoc.unreadCount) {
+            conversationDoc.unreadCount = new Map();
+          }
+          const currentUnread = conversationDoc.unreadCount.get(receiverId) || 0;
+          conversationDoc.unreadCount.set(receiverId, currentUnread + 1);
+          await conversationDoc.save();
+        }
+        console.log('✅ Unread counts updated');
+
+        const roomName = `conversation-${conversationId}`;
+        const room = io.sockets.adapter.rooms.get(roomName);
+        const roomSize = room ? room.size : 0;
+        
+        console.log(`📤 Emitting to room: ${roomName}`);
+        console.log(`📊 Room has ${roomSize} clients`);
+        
+        // ✅ Emit new message to room
+        io.to(roomName).emit('new-message', newMessage);
+        console.log('✅ Message emitted to room:', roomName);
+
+        // ✅ Fetch full conversation with participants for sidebar update
+        const fullConversation = await Conversation.findById(conversationId)
+          .populate('participants', 'name email avatar status lastSeen')
+          .populate('lastMessage');
+
+        // ✅ Emit conversation update to ALL participants
+        io.to(roomName).emit('conversation-updated', {
+          conversation: fullConversation
+        });
+        console.log('✅ Conversation update emitted to room');
+
+        // ✅ Also send to each participant individually
+        for (const participantId of allParticipants) {
+          const participantSocketId = onlineUsers.get(participantId);
+          if (participantSocketId) {
+            io.to(participantSocketId).emit('conversation-updated', {
+              conversation: fullConversation
+            });
+            console.log(`✅ Sent conversation update to participant ${participantId}`);
+          }
+        }
+
+        // ✅ IMMEDIATELY update message status to 'delivered' in database
+        const updatedMessage = await Message.findByIdAndUpdate(
+          newMessage._id, 
+          { status: 'delivered' },
+          { new: true }
+        ).populate('sender', 'name email avatar');
+        console.log('✅ Message status updated to delivered in database:', updatedMessage.status);
+
+        // ✅ IMMEDIATELY emit message-delivered to sender (NO DELAY)
+        socket.emit('message-delivered', {
+          messageId: newMessage._id,
+          conversationId,
+          message: updatedMessage
+        });
+        console.log('✅ Delivery status sent to sender immediately');
+
+        // ✅ Also send to sender's other devices
+        const senderSocketId = onlineUsers.get(senderId);
+        if (senderSocketId && senderSocketId !== socket.id) {
+          io.to(senderSocketId).emit('message-delivered', {
+            messageId: newMessage._id,
+            conversationId,
+            message: updatedMessage
+          });
+          console.log('✅ Delivery status sent to sender\'s other device');
+        }
+
+        // ✅ Emit to room as well
+        io.to(roomName).emit('message-delivered', {
+          messageId: newMessage._id,
+          conversationId,
+          message: updatedMessage
+        });
+        console.log('✅ Delivery status sent to room');
+
+        // ✅ Notify receivers
+        for (const receiverId of receiverIds) {
+          const receiverSocketId = onlineUsers.get(receiverId);
+          if (receiverSocketId) {
+            console.log(`📤 Notifying receiver ${receiverId} at socket ${receiverSocketId}`);
+            io.to(receiverSocketId).emit('new-message-notification', {
+              message: newMessage,
+              conversationId
+            });
+          } else {
+            console.log(`⚠️ Receiver ${receiverId} is not online`);
+          }
+        }
+
+      } catch (error) {
+        console.error('❌ Send message error:', error);
+        console.error('❌ Error stack:', error.stack);
+        socket.emit('message-error', { 
+          error: error.message || 'Failed to send message' 
+        });
+      }
+    });
+
+    // ✅ Mark messages as read - FIXED to only mark messages from other users
+    socket.on('mark-read', async (data) => {
+      try {
+        const { conversationId, userId } = data;
+        console.log(`👀 Marking messages as read for user ${userId} in conversation ${conversationId}`);
+
+        // ✅ Only update messages from OTHER users (not the user's own messages)
+        const result = await Message.updateMany(
+          {
+            conversation: conversationId,
+            sender: { $ne: userId },
+            readBy: { $ne: userId },
+            status: { $ne: 'read' }
+          },
+          {
+            $addToSet: { readBy: userId },
+            status: 'read'
+          }
+        );
+        
+        console.log(`✅ Updated ${result.modifiedCount} messages to read`);
+
+        // ✅ Update unread count
+        const conversation = await Conversation.findById(conversationId);
+        if (conversation) {
+          if (!conversation.unreadCount) {
+            conversation.unreadCount = new Map();
+          }
+          conversation.unreadCount.set(userId, 0);
+          await conversation.save();
+        }
+
+        const roomName = `conversation-${conversationId}`;
+        const conv = await Conversation.findById(conversationId).populate('participants', '_id');
+        const allParticipants = conv.participants.map(p => p._id.toString());
+        
+        // ✅ Emit messages-read event to all participants
+        io.to(roomName).emit('messages-read', {
+          conversationId,
+          userId
+        });
+        console.log(`✅ messages-read emitted to room ${roomName}`);
+
+        // ✅ Also emit to each participant individually
+        for (const participantId of allParticipants) {
+          const participantSocketId = onlineUsers.get(participantId);
+          if (participantSocketId) {
+            io.to(participantSocketId).emit('messages-read', {
+              conversationId,
+              userId
+            });
+            console.log(`✅ messages-read sent to participant ${participantId}`);
+          }
+        }
+
+        // ✅ Update conversation for sidebar
+        const updatedConversation = await Conversation.findById(conversationId)
+          .populate('participants', 'name email avatar status lastSeen')
+          .populate('lastMessage');
+          
+        io.to(roomName).emit('conversation-updated', {
+          conversation: updatedConversation
+        });
+        
+        for (const participantId of allParticipants) {
+          const participantSocketId = onlineUsers.get(participantId);
+          if (participantSocketId) {
+            io.to(participantSocketId).emit('conversation-updated', {
+              conversation: updatedConversation
+            });
+          }
+        }
+
+      } catch (error) {
+        console.error('❌ Mark read error:', error);
+      }
+    });
+
+    // ✅ Typing indicator - FIXED to broadcast with conversationId
+    socket.on('typing', (data) => {
+      const { conversationId, userId, isTyping } = data;
+      console.log('📤 Typing event received:', { conversationId, userId, isTyping });
+      
+      // ✅ Broadcast to ALL participants with conversationId
+      const roomName = `conversation-${conversationId}`;
+      
+      // ✅ Emit to everyone in the room EXCEPT the sender with conversationId
+      socket.to(roomName).emit('user-typing', {
+        conversationId,
+        userId,
+        isTyping
+      });
+      
+      // ✅ For extra reliability, send to each participant individually with conversationId
+      const room = io.sockets.adapter.rooms.get(roomName);
+      if (room) {
+        room.forEach((socketId) => {
+          if (socketId !== socket.id) {
+            io.to(socketId).emit('user-typing', {
+              conversationId,
+              userId,
+              isTyping
+            });
+          }
+        });
+      }
+      
+      console.log(`✅ Typing event broadcasted to room: ${roomName}, isTyping: ${isTyping}`);
+    });
+
+    // ✅ Edit message
+    socket.on('edit-message', async (data) => {
+      try {
+        const { messageId, conversationId, content } = data;
+        
+        await Message.findByIdAndUpdate(messageId, {
+          content,
+          isEdited: true,
+          editedAt: new Date()
+        });
+        
+        const updatedMessage = await Message.findById(messageId).populate('sender', 'name email avatar');
+        
+        const roomName = `conversation-${conversationId}`;
+        io.to(roomName).emit('message-edited', {
+          messageId,
+          content,
+          isEdited: true,
+          message: updatedMessage
+        });
+        
+        const updatedConversation = await Conversation.findById(conversationId)
+          .populate('participants', 'name email avatar status lastSeen')
+          .populate('lastMessage');
+          
+        const conv = await Conversation.findById(conversationId).populate('participants', '_id');
+        const allParticipants = conv.participants.map(p => p._id.toString());
+          
+        io.to(roomName).emit('conversation-updated', {
+          conversation: updatedConversation
+        });
+        
+        for (const participantId of allParticipants) {
+          const participantSocketId = onlineUsers.get(participantId);
+          if (participantSocketId) {
+            io.to(participantSocketId).emit('conversation-updated', {
+              conversation: updatedConversation
+            });
+          }
+        }
+        
+      } catch (error) {
+        console.error('Edit message error:', error);
+      }
+    });
+
+    // ✅ Delete message
+    socket.on('delete-message', async (data) => {
+      try {
+        const { messageId, conversationId, deleteFor } = data;
+        
+        if (deleteFor === 'everyone') {
+          await Message.findByIdAndUpdate(messageId, {
+            isDeleted: true,
+            content: 'This message was deleted'
+          });
+        }
+        
+        const roomName = `conversation-${conversationId}`;
+        io.to(roomName).emit('message-deleted', {
+          messageId,
+          deleteFor
+        });
+        
+        const updatedConversation = await Conversation.findById(conversationId)
+          .populate('participants', 'name email avatar status lastSeen')
+          .populate('lastMessage');
+          
+        const conv = await Conversation.findById(conversationId).populate('participants', '_id');
+        const allParticipants = conv.participants.map(p => p._id.toString());
+          
+        io.to(roomName).emit('conversation-updated', {
+          conversation: updatedConversation
+        });
+        
+        for (const participantId of allParticipants) {
+          const participantSocketId = onlineUsers.get(participantId);
+          if (participantSocketId) {
+            io.to(participantSocketId).emit('conversation-updated', {
+              conversation: updatedConversation
+            });
+          }
+        }
+        
+      } catch (error) {
+        console.error('Delete message error:', error);
+      }
+    });
+
+    // ✅ Reaction
+    socket.on('message-reaction', async (data) => {
+      try {
+        const { messageId, conversationId, userId, emoji } = data;
+        
+        const message = await Message.findById(messageId);
+        if (!message) return;
+        
+        if (!message.reactions) {
+          message.reactions = [];
+        }
+        
+        const existingIndex = message.reactions.findIndex(
+          r => r.userId.toString() === userId
+        );
+        
+        if (existingIndex !== -1) {
+          const existingEmoji = message.reactions[existingIndex].emoji;
+          if (existingEmoji === emoji) {
+            message.reactions.splice(existingIndex, 1);
+          } else {
+            message.reactions[existingIndex].emoji = emoji;
+          }
+        } else {
+          message.reactions.push({ userId, emoji });
+        }
+        
+        await message.save();
+        
+        const roomName = `conversation-${conversationId}`;
+        
+        io.to(roomName).emit('message-reaction', {
+          messageId,
+          userId,
+          emoji,
+          reactions: message.reactions
+        });
+        console.log(`✅ message-reaction emitted to room ${roomName}`);
+        
+        const updatedConversation = await Conversation.findById(conversationId)
+          .populate('participants', 'name email avatar status lastSeen')
+          .populate('lastMessage');
+          
+        const conv = await Conversation.findById(conversationId).populate('participants', '_id');
+        const allParticipants = conv.participants.map(p => p._id.toString());
+          
+        io.to(roomName).emit('conversation-updated', {
+          conversation: updatedConversation
+        });
+        
+        for (const participantId of allParticipants) {
+          const participantSocketId = onlineUsers.get(participantId);
+          if (participantSocketId) {
+            io.to(participantSocketId).emit('conversation-updated', {
+              conversation: updatedConversation
+            });
+          }
+        }
+        
+      } catch (error) {
+        console.error('Reaction error:', error);
+      }
+    });
+
+    // ✅ Forward message
+    socket.on('forward-message', async (data) => {
+      try {
+        const { originalMessageId, targetConversationId, senderId, content } = data;
+        
+        const messageData = {
+          conversation: targetConversationId,
+          sender: senderId,
+          content: content,
+          type: 'text',
+          status: 'sent',
+          isForwarded: true,
+          originalMessageId: originalMessageId
+        };
+        
+        const newMessage = new Message(messageData);
+        await newMessage.save();
+        
+        await newMessage.populate('sender', 'name email avatar');
+        
+        await Conversation.findByIdAndUpdate(targetConversationId, {
+          lastMessage: newMessage._id,
+          lastMessageTime: newMessage.createdAt
+        });
+        
+        const roomName = `conversation-${targetConversationId}`;
+        
+        io.to(roomName).emit('new-message', newMessage);
+        console.log(`✅ Forwarded message emitted to room ${roomName}`);
+        
+        const updatedConversation = await Conversation.findById(targetConversationId)
+          .populate('participants', 'name email avatar status lastSeen')
+          .populate('lastMessage');
+          
+        const conv = await Conversation.findById(targetConversationId).populate('participants', '_id');
+        const allParticipants = conv.participants.map(p => p._id.toString());
+          
+        io.to(roomName).emit('conversation-updated', {
+          conversation: updatedConversation
+        });
+        
+        for (const participantId of allParticipants) {
+          const participantSocketId = onlineUsers.get(participantId);
+          if (participantSocketId) {
+            io.to(participantSocketId).emit('conversation-updated', {
+              conversation: updatedConversation
+            });
+          }
+        }
+        
+        console.log('✅ Message forwarded successfully');
+        
+      } catch (error) {
+        console.error('Forward message error:', error);
+      }
+    });
+
+    // ✅ Block user event
+    socket.on('user-blocked', async (data) => {
+      try {
+        const { userId } = data;
+        console.log(`🚫 User ${userId} has been blocked`);
+        
+        const conversations = await Conversation.find({
+          participants: { $in: [userId] }
+        });
+        
+        for (const conv of conversations) {
+          socket.leave(`conversation-${conv._id}`);
+        }
+        
+        socket.broadcast.emit('user-blocked', {
+          userId,
+          blocked: true
+        });
+        
+      } catch (error) {
+        console.error('Block event error:', error);
+      }
+    });
+
+    // ✅ Clear chat event
+    socket.on('clear-chat', async (data) => {
+      try {
+        const { conversationId } = data;
+        console.log(`🗑️ Chat cleared for conversation: ${conversationId}`);
+        
+        const roomName = `conversation-${conversationId}`;
+        io.to(roomName).emit('clear-chat', {
+          conversationId
+        });
+        
+        const updatedConversation = await Conversation.findById(conversationId)
+          .populate('participants', 'name email avatar status lastSeen')
+          .populate('lastMessage');
+          
+        const conv = await Conversation.findById(conversationId).populate('participants', '_id');
+        const allParticipants = conv.participants.map(p => p._id.toString());
+          
+        io.to(roomName).emit('conversation-updated', {
+          conversation: updatedConversation
+        });
+        
+        for (const participantId of allParticipants) {
+          const participantSocketId = onlineUsers.get(participantId);
+          if (participantSocketId) {
+            io.to(participantSocketId).emit('conversation-updated', {
+              conversation: updatedConversation
+            });
+          }
+        }
+        
+      } catch (error) {
+        console.error('Clear chat error:', error);
+      }
+    });
+
+    // ✅ Debug: List all rooms
+    socket.on('get-rooms', () => {
+      const rooms = Array.from(socket.rooms);
+      console.log('📋 Socket rooms:', rooms);
+      socket.emit('rooms-list', rooms);
+    });
+
+    // ✅ Disconnect
+    socket.on('disconnect', async () => {
+      console.log('🔌 Client disconnected:', socket.id);
+
+      let disconnectedUserId = null;
+      for (const [userId, socketId] of onlineUsers.entries()) {
+        if (socketId === socket.id) {
+          disconnectedUserId = userId;
+          onlineUsers.delete(userId);
+          break;
+        }
+      }
+
+      if (disconnectedUserId) {
+        console.log(`👤 User ${disconnectedUserId} went offline`);
+        await User.findByIdAndUpdate(disconnectedUserId, {
+          status: 'offline',
+          lastSeen: Date.now()
+        });
+
+        socket.broadcast.emit('user-status-change', {
+          userId: disconnectedUserId,
+          status: 'offline'
+        });
+      }
+    });
+  });
+};
+
+export const isUserOnline = (userId) => {
+  return onlineUsers.has(userId);
+};
+
+export const getUserSocketId = (userId) => {
+  return onlineUsers.get(userId);
+};
