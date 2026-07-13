@@ -11,7 +11,8 @@ import authRoutes from './routes/auth.js';
 import conversationRoutes from './routes/conversations.js';
 import messageRoutes from './routes/messages.js';
 import uploadRoutes from './routes/upload.js';
-import usersRoutes from './routes/users.js';
+import usersRoutes from './routes/users.js'; // ✅ This already exists
+
 // Load environment variables
 dotenv.config();
 
@@ -25,16 +26,22 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
     origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
   }
 });
 
-// ✅ IMPORTANT: Increase JSON and URL-encoded limit
+// ✅ CORS configuration
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// ✅ Handle preflight requests
+app.options('*', cors());
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -44,13 +51,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ ROUTES - ALL routes registered here
-app.use('/api/auth', authRoutes);          // ✅ Contains /search, /profile
-app.use('/api/users', authRoutes);         // ✅ ALSO mount under /api/users
+// ✅ ROUTES - Each route file handles its own endpoints
+app.use('/api/auth', authRoutes);           // /api/auth/register, /api/auth/login, /api/auth/me
+app.use('/api/users', usersRoutes);          // /api/users/search, /api/users/profile, etc.
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);
-app.use('/api/upload', uploadRoutes);       // ✅ Contains /avatar
-app.use('/api/users', usersRoutes);
+app.use('/api/upload', uploadRoutes);
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ 
@@ -74,6 +81,7 @@ httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 WebSocket server ready`);
   console.log(`🔗 http://localhost:${PORT}`);
+  console.log(`🌐 CORS allowed origin: ${process.env.CLIENT_URL || 'http://localhost:5173'}`);
 });
 
 process.on('unhandledRejection', (err) => {
