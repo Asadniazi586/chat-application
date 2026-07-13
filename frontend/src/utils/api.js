@@ -1,22 +1,23 @@
 import axios from 'axios';
 
-// ✅ Get API URL from environment
+// ✅ Get API URL from environment - THIS IS THE ONLY URL YOUR FRONTEND SHOULD USE
 const API_URL = import.meta.env.VITE_API_URL || '';
 console.log('🔍 API URL:', API_URL);
 
-// ✅ IMPORTANT: Add /api to the base URL
+// ✅ Add /api to the base URL
 const baseURL = API_URL ? `${API_URL}/api` : '/api';
 console.log('🔍 Base URL with /api:', baseURL);
 
+// ✅ Create axios instance with the correct base URL
 const api = axios.create({
-  baseURL: baseURL,  // ✅ Now this will be: https://.../api
+  baseURL: baseURL,  // This will be: https://chat-application-backend-it24.onrender.com/api
   headers: {
     'Content-Type': 'application/json',
   },
   withCredentials: true,
 });
 
-// Request interceptor
+// ✅ Request interceptor
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -29,7 +30,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor
+// ✅ Response interceptor
 api.interceptors.response.use(
   (response) => response,
   (error) => {
