@@ -217,7 +217,7 @@ const MessageInput = ({ onSendMessage, onTyping, replyTo, onCancelReply }) => {
   }
 
   return (
-  <div className="message-input-box relative bg-white dark:bg-[#1A2A32] border-t border-gray-200 dark:border-gray-700" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
+  <div className="message-input-box relative bg-white dark:bg-[#1A2A32] border-t border-gray-200 dark:border-gray-700" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 35px)' }}>
       {/* ✅ Reply Preview */}
       {replyTo && (
         <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">

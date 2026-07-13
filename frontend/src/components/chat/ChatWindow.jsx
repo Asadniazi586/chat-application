@@ -818,7 +818,7 @@ return (
     WebkitTransform: 'translateZ(0)',
     backfaceVisibility: 'hidden',
     WebkitBackfaceVisibility: 'hidden',
-    paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 300px)'
+    paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 350px)'
   }}
 >
       {loading ? (
