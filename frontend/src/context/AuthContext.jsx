@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import api from '../utils/api'; // ✅ Use the API instance
 import toast from 'react-hot-toast';
 
 export const AuthContext = createContext();
@@ -9,35 +9,18 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
-  // Configure axios defaults
-  useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } else {
-      delete axios.defaults.headers.common['Authorization'];
-    }
-  }, [token]);
-
-  // ✅ REGISTER - FIXED to handle both response formats
+  // ✅ REGISTER - Using api instance
   const register = async (name, email, password) => {
     try {
       console.log('📝 Attempting registration:', { name, email });
 
-      const response = await axios.post('/api/auth/register', { name, email, password });
+      const response = await api.post('/auth/register', { name, email, password });
       console.log('✅ Registration response:', response.data);
 
-      // ✅ Check if response has token (successful registration)
       if (response.data.token && response.data.user) {
         toast.success('Registration successful! Please login.');
         return { success: true, user: response.data.user };
-      } 
-      // ✅ Check if response has success: true
-      else if (response.data.success === true) {
-        toast.success('Registration successful! Please login.');
-        return { success: true };
-      }
-      // ❌ Registration failed
-      else {
+      } else {
         throw new Error(response.data.message || 'Registration failed');
       }
     } catch (error) {
@@ -48,50 +31,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ✅ LOGIN - FIXED to handle both response formats
+  // ✅ LOGIN - Using api instance
   const login = async (email, password) => {
     try {
       console.log('📝 Attempting login:', { email });
 
-      const response = await axios.post('/api/auth/login', { email, password });
+      const response = await api.post('/auth/login', { email, password });
       console.log('✅ Login response:', response.data);
 
-      // ✅ Check if response has token and user
       if (response.data.token && response.data.user) {
         const { token, user: userData } = response.data;
 
-        // Store token
         localStorage.setItem('token', token);
         setToken(token);
         setUser(userData);
 
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-        console.log('✅ User set:', userData);
-        console.log('✅ User ID:', userData?._id);
-
-        toast.success(`Welcome back, ${userData.name}! 🎉`);
-        return { success: true, user: userData };
-      } 
-      // ✅ Check if response has success: true
-      else if (response.data.success === true && response.data.user) {
-        // If backend uses different field names
-        const userData = response.data.user;
-        const token = response.data.token || localStorage.getItem('token');
-        
-        if (token) {
-          localStorage.setItem('token', token);
-          setToken(token);
-          setUser(userData);
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        }
-
         console.log('✅ User set:', userData);
         toast.success(`Welcome back, ${userData.name}! 🎉`);
         return { success: true, user: userData };
-      }
-      // ❌ Login failed
-      else {
+      } else {
         throw new Error(response.data.message || 'Login failed');
       }
     } catch (error) {
@@ -106,7 +64,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
-    delete axios.defaults.headers.common['Authorization'];
     toast.success('Logged out successfully');
   };
 
@@ -120,12 +77,10 @@ export const AuthProvider = ({ children }) => {
 
       try {
         console.log('📥 Loading user from token...');
-        const response = await axios.get('/api/auth/me');
+        const response = await api.get('/auth/me');
         console.log('✅ User loaded:', response.data);
 
         if (response.data.user) {
-          setUser(response.data.user);
-        } else if (response.data.success === true && response.data.user) {
           setUser(response.data.user);
         } else {
           throw new Error('Invalid response format');
@@ -134,7 +89,6 @@ export const AuthProvider = ({ children }) => {
         console.error('❌ Error loading user:', error);
         localStorage.removeItem('token');
         setToken(null);
-        delete axios.defaults.headers.common['Authorization'];
         setUser(null);
       } finally {
         setLoading(false);
