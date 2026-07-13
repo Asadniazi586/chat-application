@@ -43,7 +43,7 @@
 }
 
 /* ============================================
-   GLOBAL RESET & BASE
+   GLOBAL RESET & BASE - FIXED for mobile
    ============================================ */
 * {
   margin: 0;
@@ -55,6 +55,11 @@ html, body, #root {
   height: 100%;
   width: 100%;
   overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 body {
@@ -62,6 +67,19 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: background-color 0.3s, color 0.3s;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ✅ Ensure proper height on mobile */
+.h-full {
+  height: 100%;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+/* ✅ Fix for flex containers on mobile */
+.flex-col {
+  min-height: 0;
 }
 
 /* ============================================
@@ -293,24 +311,52 @@ body {
   }
 }
 
-/* ✅ Safe area padding for mobile devices */
+/* ============================================
+   ✅ SAFE AREA PADDING FOR MOBILE DEVICES
+   ============================================ */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* ✅ Prevent zoom on input focus for mobile */
+/* ============================================
+   ✅ PREVENT ZOOM ON INPUT FOCUS FOR MOBILE
+   ============================================ */
 input, textarea {
   font-size: 16px !important;
 }
 
-/* ✅ Touch manipulation for better mobile interaction */
+input:focus, textarea:focus {
+  font-size: 16px !important;
+}
+
+/* ============================================
+   ✅ TOUCH MANIPULATION FOR BETTER MOBILE INTERACTION
+   ============================================ */
 .touch-manipulation {
   touch-action: manipulation;
 }
 
-/* ✅ Bottom nav safe area for iPhone */
+/* ============================================
+   ✅ BOTTOM NAV SAFE AREA FOR IPHONE
+   ============================================ */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 12px);
   }
+}
+
+/* ============================================
+   ✅ ENSURE CONTENT IS VISIBLE ON MOBILE
+   ============================================ */
+@supports (-webkit-touch-callout: none) {
+  .h-full {
+    height: -webkit-fill-available;
+  }
+}
+
+/* ============================================
+   ✅ PREVENT SCROLL ON BODY
+   ============================================ */
+.overflow-hidden {
+  overflow: hidden !important;
 }

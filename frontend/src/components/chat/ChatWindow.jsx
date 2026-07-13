@@ -710,7 +710,7 @@ const ChatWindow = ({
     : null
 
   return (
-    <div className="flex-1 flex flex-col h-full w-full bg-gray-50 dark:bg-[#0B141A] overflow-hidden">
+    <div className="flex-1 flex flex-col h-full w-full bg-gray-50 dark:bg-[#0B141A] overflow-hidden" style={{ height: '100%', minHeight: '100vh', minHeight: '-webkit-fill-available' }}>
       {/* ✅ Chat Header - Mobile Responsive */}
       <div className="flex-shrink-0">
         <ChatHeader 
@@ -807,7 +807,7 @@ const ChatWindow = ({
         </div>
       )}
 
-      {/* ✅ Messages Container - FULLY MOBILE RESPONSIVE */}
+      {/* ✅ Messages Container - FULLY MOBILE RESPONSIVE WITH BOTTOM PADDING */}
       <div 
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 space-y-1.5 sm:space-y-2 bg-[#ECE5DD] dark:bg-[#0B141A]"
@@ -815,7 +815,8 @@ const ChatWindow = ({
         style={{
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'contain',
-          touchAction: 'pan-y'
+          touchAction: 'pan-y',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)'
         }}
       >
         {loading ? (
@@ -881,13 +882,15 @@ const ChatWindow = ({
               </div>
             )}
             
+            {/* ✅ Extra bottom spacing for messages */}
+            <div className="h-16 sm:h-20" />
             <div ref={messagesEndRef} />
           </>
         )}
       </div>
 
-      {/* ✅ Message Input - Mobile Responsive */}
-      <div className="flex-shrink-0">
+      {/* ✅ Message Input - Mobile Responsive with safe area */}
+      <div className="flex-shrink-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <MessageInput 
           onSendMessage={handleSendMessage}
           onTyping={handleTyping}

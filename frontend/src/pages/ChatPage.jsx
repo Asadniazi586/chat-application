@@ -1284,41 +1284,41 @@ const ChatPage = () => {
           />
         </div>
 
-     
-<div className="flex-shrink-0 bg-[#075E54] dark:bg-[#1A2A32] flex items-center justify-around py-2 sm:py-2.5 border-t border-white/10 pb-safe">
-  {bottomNavItems.map((item) => {
-    const Icon = item.icon
-    const isActive = activeTab === item.id
-    const isAvatar = item.isAvatar
-    
-    return (
-      <button
-        key={item.id}
-        onClick={item.onClick}
-        className={`flex flex-col items-center gap-0.5 px-3 sm:px-4 py-1 transition min-w-[50px] sm:min-w-[60px] ${
-          isActive ? 'text-white' : 'text-white/60'
-        }`}
-      >
-        {isAvatar ? (
-          <img
-            src={avatarUrl}
-            alt="You"
-            className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border-2 ${
-              isActive ? 'border-white' : 'border-white/30'
-            }`}
-            onError={(e) => {
-              e.target.onerror = null
-              e.target.src = `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=25D366&color=fff&size=24`
-            }}
-          />
-        ) : (
-          <Icon size={22} className="sm:size-24" />
-        )}
-        <span className="text-[9px] sm:text-[10px] leading-3 font-medium">{item.label}</span>
-      </button>
-    )
-  })}
-</div>
+        {/* ✅ BOTTOM NAVIGATION - FIXED with safe area */}
+        <div className="flex-shrink-0 bg-[#075E54] dark:bg-[#1A2A32] flex items-center justify-around py-2 sm:py-2.5 border-t border-white/10 pb-safe">
+          {bottomNavItems.map((item) => {
+            const Icon = item.icon
+            const isActive = activeTab === item.id
+            const isAvatar = item.isAvatar
+            
+            return (
+              <button
+                key={item.id}
+                onClick={item.onClick}
+                className={`flex flex-col items-center gap-0.5 px-3 sm:px-4 py-1 transition min-w-[50px] sm:min-w-[60px] ${
+                  isActive ? 'text-white' : 'text-white/60'
+                }`}
+              >
+                {isAvatar ? (
+                  <img
+                    src={avatarUrl}
+                    alt="You"
+                    className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border-2 ${
+                      isActive ? 'border-white' : 'border-white/30'
+                    }`}
+                    onError={(e) => {
+                      e.target.onerror = null
+                      e.target.src = `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=25D366&color=fff&size=24`
+                    }}
+                  />
+                ) : (
+                  <Icon size={22} className="sm:size-24" />
+                )}
+                <span className="text-[9px] sm:text-[10px] leading-3 font-medium">{item.label}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
     )
   }
