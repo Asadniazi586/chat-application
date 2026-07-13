@@ -303,50 +303,41 @@ const MobileContactProfile = ({ contact, onBack, onBlock, onUnblock, onClearChat
         </div>
       </div>
 
-      {/* ✅ BOTTOM NAVIGATION - Contact Profile page */}
-      <div className="contact-profile-bottom-nav">
-        {bottomNavItems.map((item) => {
-          const Icon = item.icon
-          const isActive = item.id === 'chats'
-          const isAvatar = item.isAvatar
-          
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.id === 'chats') {
-                  onBack?.()
-                } else {
-                  toast.info(`${item.label} - Coming Soon!`, { icon: '🚀' })
-                }
-              }}
-              className="bottom-nav-item flex flex-col items-center gap-0.5 px-2 sm:px-4 py-0.5 transition touch-manipulation"
-              style={{
-                minWidth: '48px',
-                minHeight: '48px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '4px 8px',
-                touchAction: 'manipulation',
-                color: isActive ? 'white' : 'rgba(255,255,255,0.6)'
-              }}
-            >
-              {isAvatar ? (
-                <img
-                  src={getAvatar()}
-                  alt="You"
-                  className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 border-white/30"
-                />
-              ) : (
-                <Icon size={20} className="sm:size-22" />
-              )}
-              <span className="text-[8px] sm:text-[10px] leading-3 font-medium">{item.label}</span>
-            </button>
-          )
-        })}
-      </div>
+    {/* ✅ BOTTOM NAVIGATION - Contact Profile page (SAME PADDING as chats) */}
+<div className="contact-profile-bottom-nav">
+  {bottomNavItems.map((item) => {
+    const Icon = item.icon
+    const isActive = item.id === 'chats'
+    const isAvatar = item.isAvatar
+    
+    return (
+      <button
+        key={item.id}
+        onClick={() => {
+          if (item.id === 'chats') {
+            onBack?.()
+          } else {
+            toast.info(`${item.label} - Coming Soon!`, { icon: '🚀' })
+          }
+        }}
+        className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-0.5 transition min-w-[44px] sm:min-w-[60px] touch-manipulation ${
+          isActive ? 'text-white' : 'text-white/60'
+        }`}
+      >
+        {isAvatar ? (
+          <img
+            src={getAvatar()}
+            alt="You"
+            className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 border-white/30"
+          />
+        ) : (
+          <Icon size={20} className="sm:size-22" />
+        )}
+        <span className="text-[8px] sm:text-[10px] leading-3 font-medium">{item.label}</span>
+      </button>
+    )
+  })}
+</div>
     </div>
   )
 }

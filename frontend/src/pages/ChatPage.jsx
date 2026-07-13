@@ -934,7 +934,8 @@ const ChatPage = () => {
           </button>
         </div>
 
-        <div className="bg-[#075E54] dark:bg-[#1A2A32] flex items-center justify-around py-1.5 sm:py-2 flex-shrink-0">
+        {/* ✅ BOTTOM NAVIGATION - Profile page (SAME PADDING as chats) */}
+        <div className="profile-bottom-nav">
           {bottomNavItems.map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
@@ -944,7 +945,7 @@ const ChatPage = () => {
               <button
                 key={item.id}
                 onClick={item.onClick}
-                className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-0.5 sm:py-1 transition min-w-[40px] sm:min-w-[60px] ${
+                className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-0.5 transition min-w-[44px] sm:min-w-[60px] touch-manipulation ${
                   isActive ? 'text-white' : 'text-white/60'
                 }`}
               >
@@ -952,18 +953,12 @@ const ChatPage = () => {
                   <img
                     src={avatarUrl}
                     alt="You"
-                    className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 ${
-                      isActive ? 'border-white' : 'border-white/30'
-                    }`}
-                    onError={(e) => {
-                      e.target.onerror = null
-                      e.target.src = `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=25D366&color=fff&size=24`
-                    }}
+                    className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 border-white/30"
                   />
                 ) : (
-                  <Icon size={18} className="sm:size-22" />
+                  <Icon size={20} className="sm:size-22" />
                 )}
-                <span className="text-[8px] sm:text-[10px] leading-3">{item.label}</span>
+                <span className="text-[8px] sm:text-[10px] leading-3 font-medium">{item.label}</span>
               </button>
             )
           })}
@@ -972,350 +967,335 @@ const ChatPage = () => {
     )
   }
 
- // ✅ Mobile Chat List - FULLY FIXED
-const MobileChatList = () => {
-  const avatarUrl = getUserAvatar()
-  
-  console.log('🔍 MobileChatList render - isSelectMode:', isSelectMode, 'selected:', selectedConversations.length)
-  
-  const handleToggleSelectMode = (e) => {
-    if (e) {
-      e.preventDefault()
-      e.stopPropagation()
-    }
-    console.log('📱 Toggling selection mode - conversations:', conversations.length)
-    if (conversations.length > 0) {
-      setIsSelectMode(true)
-      console.log('✅ Selection mode set to true')
-    } else {
-      toast.info('No conversations to select')
-    }
-  }
-  
-  const handleSelectAll = (e) => {
-    if (e) {
-      e.preventDefault()
-      e.stopPropagation()
-    }
-    console.log('📱 Select all clicked')
-    selectAllConversations()
-  }
-  
-  const handleDeleteSelected = (e) => {
-    if (e) {
-      e.preventDefault()
-      e.stopPropagation()
-    }
-    console.log('📱 Delete clicked, selected:', selectedConversations.length)
-    deleteSelectedConversations()
-  }
-  
-  const handleCancelSelection = (e) => {
-    if (e) {
-      e.preventDefault()
-      e.stopPropagation()
-    }
-    console.log('📱 Cancel selection clicked')
-    setIsSelectMode(false)
-    setSelectedConversations([])
-  }
-  
-  // ✅ Handle search result click - prevents keyboard dismissal
-  const handleSearchResultClick = (result) => {
-    if (!existingUserIds.has(result._id) && !searchingUser) {
-      if (searchRef.current) {
-        const input = searchRef.current.querySelector('input')
-        if (input) {
-          setTimeout(() => input.focus(), 10)
-        }
+  // ✅ Mobile Chat List - FULLY FIXED
+  const MobileChatList = () => {
+    const avatarUrl = getUserAvatar()
+    
+    console.log('🔍 MobileChatList render - isSelectMode:', isSelectMode, 'selected:', selectedConversations.length)
+    
+    const handleToggleSelectMode = (e) => {
+      if (e) {
+        e.preventDefault()
+        e.stopPropagation()
       }
-      startConversation(result)
+      console.log('📱 Toggling selection mode - conversations:', conversations.length)
+      if (conversations.length > 0) {
+        setIsSelectMode(true)
+        console.log('✅ Selection mode set to true')
+      } else {
+        toast.info('No conversations to select')
+      }
     }
-  }
-  
-  return (
-    <div className="flex flex-col h-full bg-[#ECE5DD] dark:bg-[#0B141A]" style={{ height: '100%', minHeight: '100vh', minHeight: '-webkit-fill-available' }}>
-      {/* ✅ Header - Responsive */}
-      <div className="bg-[#075E54] dark:bg-[#1A2A32] px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between flex-shrink-0">
-        <h1 className="text-white text-base sm:text-xl font-semibold">WhatsApp</h1>
-        <div className="flex items-center gap-2 sm:gap-4">
-          {isSelectMode ? (
-            <>
-              <button
-                onClick={handleSelectAll}
-                onTouchStart={(e) => e.preventDefault()}
-                onTouchEnd={handleSelectAll}
-                className="text-white hover:text-white/80 transition p-1"
-              >
-                {selectedConversations.length === conversations.length && conversations.length > 0 ? (
-                  <CheckSquare size={18} className="sm:size-22" />
-                ) : (
-                  <Square size={18} className="sm:size-22" />
-                )}
-              </button>
-              <button
-                onClick={handleDeleteSelected}
-                onTouchStart={(e) => e.preventDefault()}
-                onTouchEnd={handleDeleteSelected}
-                className={`text-white hover:text-white/80 transition p-1 ${
-                  selectedConversations.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-                disabled={selectedConversations.length === 0}
-              >
-                <Trash2 size={18} className="sm:size-22" />
-              </button>
-              <button
-                onClick={handleCancelSelection}
-                onTouchStart={(e) => e.preventDefault()}
-                onTouchEnd={handleCancelSelection}
-                className="text-white hover:text-white/80 transition p-1"
-              >
-                <X size={18} className="sm:size-22" />
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={handleToggleSelectMode}
-                onTouchStart={(e) => e.preventDefault()}
-                onTouchEnd={handleToggleSelectMode}
-                className="text-white hover:text-white/80 transition p-1"
-                id="select-mode-button"
-              >
-                <CheckSquare size={18} className="sm:size-22" />
-              </button>
-              <button 
-                className="text-white p-1" 
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  toast.info('📷 Camera - Coming Soon!', { icon: '🚀' })
-                }}
-              >
-                <Camera size={18} className="sm:size-22" />
-              </button>
-              <button 
-                className="text-white p-1" 
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  toast.info('📱 More options - Coming Soon!', { icon: '🚀' })
-                }}
-              >
-                <MoreVertical size={18} className="sm:size-22" />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* ✅ Search Bar - FIXED */}
-      <div className="bg-[#075E54] dark:bg-[#1A2A32] px-2 sm:px-3 pb-2 flex-shrink-0">
-        <div ref={searchRef} className="relative">
-          <div className="bg-white dark:bg-[#0B141A] rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 flex items-center gap-2">
-            <Search size={15} className="sm:size-18 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                const value = e.target.value
-                setSearchQuery(value)
-                if (value.length >= 2) {
-                  setShowSearchResults(true)
-                } else {
-                  setShowSearchResults(false)
-                  setSearchResults([])
-                }
-              }}
-              onFocus={() => {
-                if (searchQuery.length >= 2) {
-                  setShowSearchResults(true)
-                }
-              }}
-              placeholder="Search by name or email..."
-              className="search-input flex-1 bg-transparent outline-none text-xs sm:text-sm dark:text-white placeholder-gray-400 min-w-0"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => {
-                  setSearchQuery('')
-                  setSearchResults([])
-                  setShowSearchResults(false)
-                  setTimeout(() => {
-                    if (searchRef.current) {
-                      const input = searchRef.current.querySelector('input')
-                      if (input) input.focus()
-                    }
-                  }, 50)
-                }}
-                className="text-gray-400 hover:text-gray-600 p-0.5"
-              >
-                <X size={14} className="sm:size-16" />
-              </button>
-            )}
-          </div>
-
-          {/* ✅ Search Results */}
-          {showSearchResults && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1A2A32] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-48 sm:max-h-64 overflow-y-auto z-50">
-              {searchLoading ? (
-                <div className="flex items-center justify-center p-3 sm:p-4">
-                  <Loader className="animate-spin text-[#25D366]" size={20} />
-                </div>
-              ) : searchResults.length > 0 ? (
-                searchResults.map((result) => {
-                  const isAlreadyAdded = existingUserIds.has(result._id)
-                  
-                  return (
-                    <div
-                      key={result._id}
-                      className={`flex items-center justify-between p-2.5 sm:p-3 ${
-                        isAlreadyAdded 
-                          ? 'opacity-50 cursor-not-allowed' 
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
-                      } transition`}
-                      onClick={() => handleSearchResultClick(result)}
-                    >
-                      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                        <img
-                          src={result.avatar || `https://ui-avatars.com/api/?name=${result.name}&background=25D366&color=fff&size=32`}
-                          alt={result.name}
-                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover flex-shrink-0"
-                          onError={(e) => {
-                            e.target.onerror = null
-                            e.target.src = `https://ui-avatars.com/api/?name=${result.name}&background=25D366&color=fff&size=32`
-                          }}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-gray-800 dark:text-white text-xs sm:text-sm truncate">{result.name}</p>
-                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">{result.email}</p>
-                        </div>
-                      </div>
-                      <button
-                        className={`p-1.5 sm:p-2 rounded-lg transition flex-shrink-0 ml-2 ${
-                          isAlreadyAdded 
-                            ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
-                            : 'bg-[#25D366] text-white hover:bg-[#20b858]'
-                        }`}
-                        disabled={isAlreadyAdded || searchingUser}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (!isAlreadyAdded) {
-                            if (searchRef.current) {
-                              const input = searchRef.current.querySelector('input')
-                              if (input) {
-                                setTimeout(() => input.focus(), 10)
-                              }
-                            }
-                            startConversation(result)
-                          }
-                        }}
-                      >
-                        {isAlreadyAdded ? (
-                          <UserCheck size={14} className="sm:size-16" />
-                        ) : searchingUser ? (
-                          <Loader className="animate-spin" size={14} />
-                        ) : (
-                          <UserPlus size={14} className="sm:size-16" />
-                        )}
-                      </button>
-                    </div>
-                  )
-                })
-              ) : searchQuery.length >= 2 ? (
-                <div className="p-3 sm:p-4 text-center text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
-                  No users found
-                </div>
-              ) : null}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ✅ Tabs - Responsive */}
-      <div className="bg-white dark:bg-[#1A2A32] border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
-        <div className="flex overflow-x-auto px-2 py-1 gap-1">
-          {['All', 'Unread', 'Favourites', 'Groups'].map((tab, index) => (
-            <button
-              key={index}
-              className={`px-3 sm:px-4 py-1 text-[10px] sm:text-sm font-medium rounded-full whitespace-nowrap transition ${
-                index === 0
-                  ? 'bg-[#25D366] text-white'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ✅ Archived - Responsive */}
-      <div className="bg-white dark:bg-[#1A2A32] px-3 sm:px-4 py-1.5 sm:py-2 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-        <span className="text-[10px] sm:text-sm text-gray-500 dark:text-gray-400 font-medium">Archived</span>
-      </div>
-
-      {/* ✅ Chat List - Takes remaining space */}
-      <div className="flex-1 overflow-y-auto bg-white dark:bg-[#1A2A32]" style={{ flex: '1 1 auto', minHeight: 0 }}>
-        <ChatList
-          conversations={conversations}
-          setConversations={setConversations}
-          currentConversation={currentConversation}
-          onSelectConversation={handleSelectConversation}
-          loading={loading}
-          isSelectMode={isSelectMode}
-          selectedConversations={selectedConversations}
-          toggleConversationSelection={toggleConversationSelection}
-        />
-      </div>
-
-{/* ✅ BOTTOM NAVIGATION - FIXED with extra padding */}
-<div className="bottom-nav">
-  {bottomNavItems.map((item) => {
-    const Icon = item.icon
-    const isActive = activeTab === item.id
-    const isAvatar = item.isAvatar
+    
+    const handleSelectAll = (e) => {
+      if (e) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+      console.log('📱 Select all clicked')
+      selectAllConversations()
+    }
+    
+    const handleDeleteSelected = (e) => {
+      if (e) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+      console.log('📱 Delete clicked, selected:', selectedConversations.length)
+      deleteSelectedConversations()
+    }
+    
+    const handleCancelSelection = (e) => {
+      if (e) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+      console.log('📱 Cancel selection clicked')
+      setIsSelectMode(false)
+      setSelectedConversations([])
+    }
+    
+    // ✅ Handle search result click - prevents keyboard dismissal
+    const handleSearchResultClick = (result) => {
+      if (!existingUserIds.has(result._id) && !searchingUser) {
+        if (searchRef.current) {
+          const input = searchRef.current.querySelector('input')
+          if (input) {
+            setTimeout(() => input.focus(), 10)
+          }
+        }
+        startConversation(result)
+      }
+    }
     
     return (
-      <button
-        key={item.id}
-        onClick={item.onClick}
-        className="bottom-nav-item flex flex-col items-center gap-0.5 px-2 sm:px-4 py-0.5 transition touch-manipulation"
-        style={{
-          minWidth: '48px',
-          minHeight: '48px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '4px 8px',
-          touchAction: 'manipulation',
-          color: isActive ? 'white' : 'rgba(255,255,255,0.6)'
-        }}
-      >
-        {isAvatar ? (
-          <img
-            src={avatarUrl}
-            alt="You"
-            className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 ${
-              isActive ? 'border-white' : 'border-white/30'
-            }`}
-            onError={(e) => {
-              e.target.onerror = null
-              e.target.src = `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=25D366&color=fff&size=24`
-            }}
+      <div className="flex flex-col h-full bg-[#ECE5DD] dark:bg-[#0B141A]" style={{ height: '100%', minHeight: '100vh', minHeight: '-webkit-fill-available' }}>
+        {/* ✅ Header - Responsive */}
+        <div className="bg-[#075E54] dark:bg-[#1A2A32] px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between flex-shrink-0">
+          <h1 className="text-white text-base sm:text-xl font-semibold">WhatsApp</h1>
+          <div className="flex items-center gap-2 sm:gap-4">
+            {isSelectMode ? (
+              <>
+                <button
+                  onClick={handleSelectAll}
+                  onTouchStart={(e) => e.preventDefault()}
+                  onTouchEnd={handleSelectAll}
+                  className="text-white hover:text-white/80 transition p-1"
+                >
+                  {selectedConversations.length === conversations.length && conversations.length > 0 ? (
+                    <CheckSquare size={18} className="sm:size-22" />
+                  ) : (
+                    <Square size={18} className="sm:size-22" />
+                  )}
+                </button>
+                <button
+                  onClick={handleDeleteSelected}
+                  onTouchStart={(e) => e.preventDefault()}
+                  onTouchEnd={handleDeleteSelected}
+                  className={`text-white hover:text-white/80 transition p-1 ${
+                    selectedConversations.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  disabled={selectedConversations.length === 0}
+                >
+                  <Trash2 size={18} className="sm:size-22" />
+                </button>
+                <button
+                  onClick={handleCancelSelection}
+                  onTouchStart={(e) => e.preventDefault()}
+                  onTouchEnd={handleCancelSelection}
+                  className="text-white hover:text-white/80 transition p-1"
+                >
+                  <X size={18} className="sm:size-22" />
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleToggleSelectMode}
+                  onTouchStart={(e) => e.preventDefault()}
+                  onTouchEnd={handleToggleSelectMode}
+                  className="text-white hover:text-white/80 transition p-1"
+                  id="select-mode-button"
+                >
+                  <CheckSquare size={18} className="sm:size-22" />
+                </button>
+                <button 
+                  className="text-white p-1" 
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    toast.info('📷 Camera - Coming Soon!', { icon: '🚀' })
+                  }}
+                >
+                  <Camera size={18} className="sm:size-22" />
+                </button>
+                <button 
+                  className="text-white p-1" 
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    toast.info('📱 More options - Coming Soon!', { icon: '🚀' })
+                  }}
+                >
+                  <MoreVertical size={18} className="sm:size-22" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ✅ Search Bar - FIXED */}
+        <div className="bg-[#075E54] dark:bg-[#1A2A32] px-2 sm:px-3 pb-2 flex-shrink-0">
+          <div ref={searchRef} className="relative">
+            <div className="bg-white dark:bg-[#0B141A] rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 flex items-center gap-2">
+              <Search size={15} className="sm:size-18 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  const value = e.target.value
+                  setSearchQuery(value)
+                  if (value.length >= 2) {
+                    setShowSearchResults(true)
+                  } else {
+                    setShowSearchResults(false)
+                    setSearchResults([])
+                  }
+                }}
+                onFocus={() => {
+                  if (searchQuery.length >= 2) {
+                    setShowSearchResults(true)
+                  }
+                }}
+                placeholder="Search by name or email..."
+                className="search-input flex-1 bg-transparent outline-none text-xs sm:text-sm dark:text-white placeholder-gray-400 min-w-0"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('')
+                    setSearchResults([])
+                    setShowSearchResults(false)
+                    setTimeout(() => {
+                      if (searchRef.current) {
+                        const input = searchRef.current.querySelector('input')
+                        if (input) input.focus()
+                      }
+                    }, 50)
+                  }}
+                  className="text-gray-400 hover:text-gray-600 p-0.5"
+                >
+                  <X size={14} className="sm:size-16" />
+                </button>
+              )}
+            </div>
+
+            {/* ✅ Search Results */}
+            {showSearchResults && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1A2A32] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-48 sm:max-h-64 overflow-y-auto z-50">
+                {searchLoading ? (
+                  <div className="flex items-center justify-center p-3 sm:p-4">
+                    <Loader className="animate-spin text-[#25D366]" size={20} />
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map((result) => {
+                    const isAlreadyAdded = existingUserIds.has(result._id)
+                    
+                    return (
+                      <div
+                        key={result._id}
+                        className={`flex items-center justify-between p-2.5 sm:p-3 ${
+                          isAlreadyAdded 
+                            ? 'opacity-50 cursor-not-allowed' 
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
+                        } transition`}
+                        onClick={() => handleSearchResultClick(result)}
+                      >
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                          <img
+                            src={result.avatar || `https://ui-avatars.com/api/?name=${result.name}&background=25D366&color=fff&size=32`}
+                            alt={result.name}
+                            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover flex-shrink-0"
+                            onError={(e) => {
+                              e.target.onerror = null
+                              e.target.src = `https://ui-avatars.com/api/?name=${result.name}&background=25D366&color=fff&size=32`
+                            }}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-gray-800 dark:text-white text-xs sm:text-sm truncate">{result.name}</p>
+                            <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">{result.email}</p>
+                          </div>
+                        </div>
+                        <button
+                          className={`p-1.5 sm:p-2 rounded-lg transition flex-shrink-0 ml-2 ${
+                            isAlreadyAdded 
+                              ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
+                              : 'bg-[#25D366] text-white hover:bg-[#20b858]'
+                          }`}
+                          disabled={isAlreadyAdded || searchingUser}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (!isAlreadyAdded) {
+                              if (searchRef.current) {
+                                const input = searchRef.current.querySelector('input')
+                                if (input) {
+                                  setTimeout(() => input.focus(), 10)
+                                }
+                              }
+                              startConversation(result)
+                            }
+                          }}
+                        >
+                          {isAlreadyAdded ? (
+                            <UserCheck size={14} className="sm:size-16" />
+                          ) : searchingUser ? (
+                            <Loader className="animate-spin" size={14} />
+                          ) : (
+                            <UserPlus size={14} className="sm:size-16" />
+                          )}
+                        </button>
+                      </div>
+                    )
+                  })
+                ) : searchQuery.length >= 2 ? (
+                  <div className="p-3 sm:p-4 text-center text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+                    No users found
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ✅ Tabs - Responsive */}
+        <div className="bg-white dark:bg-[#1A2A32] border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+          <div className="flex overflow-x-auto px-2 py-1 gap-1">
+            {['All', 'Unread', 'Favourites', 'Groups'].map((tab, index) => (
+              <button
+                key={index}
+                className={`px-3 sm:px-4 py-1 text-[10px] sm:text-sm font-medium rounded-full whitespace-nowrap transition ${
+                  index === 0
+                    ? 'bg-[#25D366] text-white'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ✅ Archived - Responsive */}
+        <div className="bg-white dark:bg-[#1A2A32] px-3 sm:px-4 py-1.5 sm:py-2 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <span className="text-[10px] sm:text-sm text-gray-500 dark:text-gray-400 font-medium">Archived</span>
+        </div>
+
+        {/* ✅ Chat List - Takes remaining space */}
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-[#1A2A32]" style={{ flex: '1 1 auto', minHeight: 0 }}>
+          <ChatList
+            conversations={conversations}
+            setConversations={setConversations}
+            currentConversation={currentConversation}
+            onSelectConversation={handleSelectConversation}
+            loading={loading}
+            isSelectMode={isSelectMode}
+            selectedConversations={selectedConversations}
+            toggleConversationSelection={toggleConversationSelection}
           />
-        ) : (
-          <Icon size={20} className="sm:size-22" />
-        )}
-        <span className="text-[8px] sm:text-[10px] leading-3 font-medium">{item.label}</span>
-      </button>
+        </div>
+
+        {/* ✅ BOTTOM NAVIGATION - Chats section */}
+        <div className="bottom-nav">
+          {bottomNavItems.map((item) => {
+            const Icon = item.icon
+            const isActive = activeTab === item.id
+            const isAvatar = item.isAvatar
+            
+            return (
+              <button
+                key={item.id}
+                onClick={item.onClick}
+                className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-0.5 transition min-w-[44px] sm:min-w-[60px] touch-manipulation ${
+                  isActive ? 'text-white' : 'text-white/60'
+                }`}
+              >
+                {isAvatar ? (
+                  <img
+                    src={avatarUrl}
+                    alt="You"
+                    className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 border-white/30"
+                  />
+                ) : (
+                  <Icon size={20} className="sm:size-22" />
+                )}
+                <span className="text-[8px] sm:text-[10px] leading-3 font-medium">{item.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
     )
-  })}
-</div>
-    </div>
-  )
-}
+  }
 
   // Desktop View
   if (!isMobile) {
