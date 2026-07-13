@@ -1284,7 +1284,7 @@ const ChatPage = () => {
           />
         </div>
 
-     // ✅ BOTTOM NAVIGATION - FIXED: Add safe area padding and ensure visibility
+     
 <div className="flex-shrink-0 bg-[#075E54] dark:bg-[#1A2A32] flex items-center justify-around py-2 sm:py-2.5 border-t border-white/10 pb-safe">
   {bottomNavItems.map((item) => {
     const Icon = item.icon
