@@ -3,7 +3,8 @@ import { useAuth } from '../../hooks/useAuth'
 import { useSocket } from '../../hooks/useSocket'
 import { CheckCheck, MessageCircle, CheckSquare, Square, Pin, Clock } from 'lucide-react'
 import axios from 'axios'
-import api from '../../utils/api'  // ✅ Add this
+import api from '../../utils/api'
+
 const ChatList = ({ 
   conversations, 
   currentConversation, 
@@ -99,11 +100,11 @@ const ChatList = ({
     }
   }, [setConversations])
 
-  // ✅ Force refresh when component mounts
+  // ✅ Force refresh when component mounts - ✅ FIXED: Use api instead of axios
   useEffect(() => {
     const refreshConversations = async () => {
       try {
-        const response = await axios.get('/api/conversations')
+        const response = await api.get('/conversations')
         if (setConversations) {
           setConversations(response.data)
         }
@@ -496,10 +497,14 @@ const ChatList = ({
     return null
   }
 
+  // ✅ FIXED: Handle conversation click without keyboard dismissal
   const handleConversationClick = (conversation, event) => {
     if (event) {
       event.preventDefault()
-      event.stopPropagation()
+      // ✅ Only stop propagation if not in select mode
+      if (!isSelectMode) {
+        // Don't stop propagation - let the event bubble naturally
+      }
     }
     if (isSelectMode) {
       toggleConversationSelection(conversation._id)
@@ -566,13 +571,20 @@ const ChatList = ({
               isActive ? 'bg-gray-100 dark:bg-gray-800' : ''
             } ${isSelected ? 'bg-gray-100 dark:bg-gray-800' : ''}`}
             onClick={(e) => handleConversationClick(conversation, e)}
+            // ✅ FIXED: Only prevent default, don't stop propagation
             onTouchStart={(e) => {
-              e.preventDefault()
+              // Only prevent default if in select mode
+              if (isSelectMode) {
+                e.preventDefault()
+              }
             }}
             onTouchEnd={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              handleConversationClick(conversation, e)
+              // Only handle if not in select mode and not a search result click
+              if (!isSelectMode) {
+                e.preventDefault()
+                // Don't stop propagation - allow keyboard to stay focused
+                handleConversationClick(conversation, e)
+              }
             }}
           >
             {isSelectMode && (
