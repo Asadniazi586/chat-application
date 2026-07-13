@@ -16,7 +16,11 @@ export const SocketProvider = ({ children }) => {
 
     console.log('🔌 Initializing socket connection...')
     
-    const socketInstance = io('http://localhost:5000', {
+    // ✅ FIXED: Use environment variable for socket URL
+    const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+    console.log('🔌 Socket URL:', SOCKET_URL)
+    
+    const socketInstance = io(SOCKET_URL, {
       auth: { token },
       transports: ['websocket'],
       reconnection: true,

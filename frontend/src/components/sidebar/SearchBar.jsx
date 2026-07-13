@@ -3,7 +3,7 @@ import axios from 'axios'
 import { Search, X, UserPlus, Loader, UserCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
-
+import api from '../../utils/api'  // ✅ Add this
 const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversations = [] }) => {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
@@ -48,7 +48,7 @@ const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversati
       setLoading(true)
       try {
         console.log('🔍 Searching for:', query)
-        const response = await axios.get(`/api/auth/search?q=${query}`)
+       const response = await api.get(`/auth/search?q=${query}`)
         console.log('✅ Search results:', response.data)
         
         // Filter out current user
@@ -80,9 +80,9 @@ const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversati
     setSearching(true)
     try {
       console.log('💬 Starting conversation with:', selectedUser)
-      const response = await axios.post('/api/conversations', {
-        participantId: selectedUser._id
-      })
+     const response = await api.post('/conversations', {
+  participantId: selectedUser._id
+})
       
       const conversation = response.data
       console.log('✅ Conversation created:', conversation)

@@ -3,7 +3,6 @@ import Sidebar from '../components/sidebar/Sidebar'
 import ChatWindow from '../components/chat/ChatWindow'
 import { useAuth } from '../hooks/useAuth'
 import { useSocket } from '../hooks/useSocket'
-import axios from 'axios'
 import toast from 'react-hot-toast'
 import { 
   MessageCircle, Users, Phone, Camera, Search, MoreVertical, X, 
@@ -13,6 +12,7 @@ import {
 } from 'lucide-react'
 import MobileContactProfile from '../components/common/MobileContactProfile'
 import ChatList from '../components/chat/ChatList'
+import api from '../utils/api' // ✅ Add this
 
 const ChatPage = () => {
   const [conversations, setConversations] = useState([])
@@ -126,7 +126,7 @@ const ChatPage = () => {
     }
   }, [isMobile])
 
-  // Load conversations
+  // Load conversations - ✅ FIXED
   useEffect(() => {
     const loadConversations = async () => {
       if (!user) {
@@ -135,7 +135,7 @@ const ChatPage = () => {
       }
       try {
         console.log('📥 Loading conversations for user:', user._id)
-        const response = await axios.get('/api/conversations')
+        const response = await api.get('/conversations')
         console.log('📥 Conversations loaded:', response.data.length)
         setConversations(response.data)
       } catch (error) {
@@ -279,11 +279,11 @@ const ChatPage = () => {
     }
   }, [socket, setConversations])
 
-  // ✅ Manual refresh function - for debugging
+  // ✅ Manual refresh function - for debugging - ✅ FIXED
   const manualRefresh = async () => {
     try {
       console.log('🔄 Manual refresh triggered...')
-      const response = await axios.get('/api/conversations')
+      const response = await api.get('/conversations')
       setConversations(response.data)
       console.log('✅ Manual refresh complete, conversations:', response.data.length)
       toast.success('Conversations refreshed!')
@@ -295,7 +295,7 @@ const ChatPage = () => {
   // Make available in console
   window.manualRefresh = manualRefresh
 
-  // ✅ Search users - Updated to not clear on empty
+  // ✅ Search users - Updated to not clear on empty - ✅ FIXED
   useEffect(() => {
     const searchUsers = async () => {
       if (!searchQuery.trim() || searchQuery.length < 2) {
@@ -306,7 +306,7 @@ const ChatPage = () => {
 
       setSearchLoading(true)
       try {
-        const response = await axios.get(`/api/users/search?q=${searchQuery}`)
+        const response = await api.get(`/users/search?q=${searchQuery}`)
         const filtered = response.data.filter(u => u._id !== user?._id)
         setSearchResults(filtered)
         setShowSearchResults(true)
@@ -336,7 +336,7 @@ const ChatPage = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // ✅ Updated handleSelectConversation with dontOpenChat flag
+  // ✅ Updated handleSelectConversation with dontOpenChat flag - ✅ FIXED
   const handleSelectConversation = async (conversation, dontOpenChat = false) => {
     console.log('📂 Selecting conversation:', conversation._id)
     
@@ -368,7 +368,7 @@ const ChatPage = () => {
     }
 
     try {
-      const response = await axios.get(`/api/messages/${conversation._id}`)
+      const response = await api.get(`/messages/${conversation._id}`)
       console.log('📥 Loaded messages:', response.data.length)
       setMessages(response.data || [])
       
@@ -402,7 +402,7 @@ const ChatPage = () => {
     setShowChat(false)
   }
 
-  // ✅ Start conversation with searched user - FIXED for mobile (don't open chat)
+  // ✅ Start conversation with searched user - FIXED for mobile (don't open chat) - ✅ FIXED
   const startConversation = async (selectedUser) => {
     if (existingUserIds.has(selectedUser._id)) {
       toast.info(`Already chatting with ${selectedUser.name}`)
@@ -414,7 +414,7 @@ const ChatPage = () => {
 
     setSearchingUser(true)
     try {
-      const response = await axios.post('/api/conversations', {
+      const response = await api.post('/conversations', {
         participantId: selectedUser._id
       })
       
@@ -461,7 +461,7 @@ const ChatPage = () => {
     }
   }
 
-  // ✅ Delete selected conversations - FIXED for flashing
+  // ✅ Delete selected conversations - FIXED for flashing - ✅ FIXED
   const deleteSelectedConversations = async () => {
     console.log('🗑️ deleteSelectedConversations called, selected:', selectedConversations.length)
     if (selectedConversations.length === 0) return
@@ -485,7 +485,7 @@ const ChatPage = () => {
       
       // ✅ Then delete from server
       for (const convId of convIdsToDelete) {
-        await axios.delete(`/api/conversations/${convId}`)
+        await api.delete(`/conversations/${convId}`)
       }
       
       toast.success(`${convIdsToDelete.length} conversation(s) deleted`)
@@ -493,7 +493,7 @@ const ChatPage = () => {
       console.error('Delete conversations error:', error)
       toast.error('Failed to delete conversations')
       // ✅ Reload if deletion failed
-      const response = await axios.get('/api/conversations')
+      const response = await api.get('/conversations')
       setConversations(response.data)
     }
   }
@@ -632,7 +632,7 @@ const ChatPage = () => {
     });
   }
 
-  // ✅ Handle image upload
+  // ✅ Handle image upload - ✅ FIXED
   const handleImageUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -649,7 +649,7 @@ const ChatPage = () => {
       const formData = new FormData()
       formData.append('file', compressedFile)
       
-      const response = await axios.post('/api/upload/avatar', formData, {
+      const response = await api.post('/upload/avatar', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       
@@ -657,7 +657,7 @@ const ChatPage = () => {
         const avatarUrl = response.data.url
         setSelectedImage(avatarUrl)
         
-        await axios.put('/api/users/profile', { avatar: avatarUrl })
+        await api.put('/users/profile', { avatar: avatarUrl })
         
         if (setUser) {
           setUser({ ...user, avatar: avatarUrl })
@@ -673,10 +673,10 @@ const ChatPage = () => {
     }
   }
 
-  // ✅ Handle save profile
+  // ✅ Handle save profile - ✅ FIXED
   const handleSaveProfile = async () => {
     try {
-      const response = await axios.put('/api/users/profile', { 
+      const response = await api.put('/users/profile', { 
         name: editName, 
         about: editAbout 
       })

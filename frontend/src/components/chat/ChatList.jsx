@@ -3,7 +3,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useSocket } from '../../hooks/useSocket'
 import { CheckCheck, MessageCircle, CheckSquare, Square, Pin, Clock } from 'lucide-react'
 import axios from 'axios'
-
+import api from '../../utils/api'  // ✅ Add this
 const ChatList = ({ 
   conversations, 
   currentConversation, 
@@ -83,7 +83,7 @@ const ChatList = ({
       if (document.visibilityState === 'visible') {
         console.log('📱 ChatList became visible - refreshing conversations')
         try {
-          const response = await axios.get('/api/conversations')
+          const response = await api.get('/conversations')
           if (setConversations) {
             setConversations(response.data)
           }
