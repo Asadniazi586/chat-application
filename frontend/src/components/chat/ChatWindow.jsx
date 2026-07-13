@@ -6,7 +6,7 @@ import MessageBubble from './MessageBubble'
 import MessageInput from './MessageInput'
 import ForwardModal from './ForwardModal'
 import ContactProfile from '../sidebar/ContactProfile'
-import api from '../../utils/api' // ✅ Add this
+import api from '../../utils/api'
 import toast from 'react-hot-toast'
 import { MessageCircle, Pin, X, PinOff } from 'lucide-react'
 
@@ -29,9 +29,20 @@ const ChatWindow = ({
   const [replyToMessage, setReplyToMessage] = useState(null)
   const [showContactProfile, setShowContactProfile] = useState(false)
   const [selectedContact, setSelectedContact] = useState(null)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const messagesEndRef = useRef(null)
+  const messagesContainerRef = useRef(null)
   const { socket, isConnected } = useSocket()
   const { user } = useAuth()
+
+  // ✅ Check mobile on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const showToast = (message, type = 'success') => {
     toast.dismiss()
@@ -70,7 +81,6 @@ const ChatWindow = ({
       
       setLoading(true)
       try {
-        // ✅ FIXED: Use api instead of axios
         const response = await api.get(`/messages/${conversation._id}`)
         setMessages(response.data || [])
         setTimeout(scrollToBottom, 100)
@@ -680,14 +690,14 @@ const ChatWindow = ({
   if (!conversation) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-[#0B141A] h-full w-full">
-        <div className="text-center">
-          <div className="w-20 h-20 mx-auto bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-            <MessageCircle size={40} className="text-[#25D366]" />
+        <div className="text-center px-4">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+            <MessageCircle size={32} className="sm:size-10 text-[#25D366]" />
           </div>
-          <h3 className="mt-4 text-lg font-semibold text-gray-700 dark:text-gray-300">
+          <h3 className="mt-3 sm:mt-4 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300">
             WhatsApp
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
             Select a conversation to start chatting
           </p>
         </div>
@@ -701,6 +711,7 @@ const ChatWindow = ({
 
   return (
     <div className="flex-1 flex flex-col h-full w-full bg-gray-50 dark:bg-[#0B141A] overflow-hidden">
+      {/* ✅ Chat Header - Mobile Responsive */}
       <div className="flex-shrink-0">
         <ChatHeader 
           conversation={conversation} 
@@ -710,7 +721,6 @@ const ChatWindow = ({
           onProfileClick={handleContactProfileClick}
           onClearChat={() => {
             if (conversation) {
-              // ✅ FIXED: Use api instead of axios
               api.delete(`/users/clear-chat/${conversation._id}`)
                 .then(() => {
                   setMessages([])
@@ -724,7 +734,6 @@ const ChatWindow = ({
           }}
           onBlockUser={() => {
             if (otherUser) {
-              // ✅ FIXED: Use api instead of axios
               api.post('/users/block', { userId: otherUser._id })
                 .then(() => {
                   toast.success(`${otherUser.name} blocked successfully`)
@@ -737,7 +746,6 @@ const ChatWindow = ({
           }}
           onUnblockUser={() => {
             if (otherUser) {
-              // ✅ FIXED: Use api instead of axios
               api.post('/users/unblock', { userId: otherUser._id })
                 .then(() => {
                   toast.success(`${otherUser.name} unblocked successfully`)
@@ -752,24 +760,26 @@ const ChatWindow = ({
         />
       </div>
 
+      {/* ✅ Reply To Preview - Mobile Responsive */}
       {replyToMessage && (
-        <div className="flex-shrink-0 bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">↩️ Replying to:</span>
-            <span className="text-xs text-gray-700 dark:text-gray-300 truncate">
+        <div className="flex-shrink-0 bg-gray-100 dark:bg-gray-800 px-3 sm:px-4 py-1.5 sm:py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">↩️</span>
+            <span className="text-[10px] sm:text-xs text-gray-700 dark:text-gray-300 truncate">
               {replyToMessage.content}
             </span>
           </div>
           <button
             onClick={() => setReplyToMessage(null)}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition flex-shrink-0 ml-2"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition flex-shrink-0 ml-1 sm:ml-2 p-0.5"
           >
-            <X size={16} />
+            <X size={14} className="sm:size-16" />
           </button>
         </div>
       )}
 
-      <div className={`flex-shrink-0 px-4 py-1 text-xs text-center border-b ${
+      {/* ✅ Connection Status - Mobile Responsive */}
+      <div className={`flex-shrink-0 px-2 sm:px-4 py-0.5 sm:py-1 text-[9px] sm:text-xs text-center border-b ${
         isConnected 
           ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800' 
           : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
@@ -777,18 +787,19 @@ const ChatWindow = ({
         {isConnected ? '🟢 Connected to server' : '🔴 Disconnected from server'}
       </div>
 
+      {/* ✅ Pinned Message - Mobile Responsive */}
       {pinnedMessages.length > 0 && currentPinnedMessage && (
         <div 
           className="flex-shrink-0 bg-white dark:bg-[#1A2A32] border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition"
           onClick={handlePinnedClick}
         >
-          <div className="flex items-center gap-2 px-4 py-1.5">
-            <Pin size={14} className="text-[#25D366] fill-[#25D366]" />
-            <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">
-              {currentPinnedMessage.content?.substring(0, 50)}
-              {currentPinnedMessage.content?.length > 50 ? '...' : ''}
+          <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5">
+            <Pin size={12} className="sm:size-14 text-[#25D366] fill-[#25D366] flex-shrink-0" />
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate flex-1">
+              {currentPinnedMessage.content?.substring(0, 40)}
+              {currentPinnedMessage.content?.length > 40 ? '...' : ''}
             </span>
-            <span className="text-xs text-[#25D366] ml-auto flex-shrink-0">
+            <span className="text-[9px] sm:text-xs text-[#25D366] ml-auto flex-shrink-0">
               {pinnedIndex % pinnedMessages.length + 1}/{pinnedMessages.length}
             </span>
           </div>
@@ -796,19 +807,26 @@ const ChatWindow = ({
         </div>
       )}
 
+      {/* ✅ Messages Container - FULLY MOBILE RESPONSIVE */}
       <div 
-        className="flex-1 overflow-y-auto p-4 space-y-2 bg-[#ECE5DD] dark:bg-[#0B141A]"
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 space-y-1.5 sm:space-y-2 bg-[#ECE5DD] dark:bg-[#0B141A]"
         id="messages-container"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain',
+          touchAction: 'pan-y'
+        }}
       >
         {loading ? (
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#25D366]" />
+          <div className="flex justify-center items-center h-full">
+            <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-[#25D366]" />
           </div>
         ) : (
           <>
             {messages && messages.length === 0 && (
-              <div className="flex justify-center my-8">
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
+              <div className="flex justify-center my-6 sm:my-8">
+                <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
                   No messages yet. Say hello! 👋
                 </p>
               </div>
@@ -820,22 +838,11 @@ const ChatWindow = ({
                 new Date(message.createdAt).toDateString() !== 
                 new Date(messages[index - 1]?.createdAt).toDateString()
 
-              if (index === 0 || index === messages.length - 1) {
-                console.log('🔍 Rendering message:', {
-                  id: message._id,
-                  content: message.content?.substring(0, 20),
-                  reactions: message.reactions,
-                  reactionsCount: message.reactions?.length || 0,
-                  index,
-                  total: messages.length
-                })
-              }
-
               return (
                 <React.Fragment key={message._id || index}>
                   {showDate && (
-                    <div className="flex justify-center my-2">
-                      <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-3 py-1 rounded-full">
+                    <div className="flex justify-center my-1.5 sm:my-2">
+                      <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
                         {new Date(message.createdAt).toLocaleDateString([], { 
                           weekday: 'long', 
                           month: 'short', 
@@ -844,7 +851,7 @@ const ChatWindow = ({
                       </span>
                     </div>
                   )}
-                  <div id={`msg-${message._id}`}>
+                  <div id={`msg-${message._id}`} className="w-full">
                     <MessageBubble 
                       message={message} 
                       isOwn={isOwn}
@@ -861,13 +868,14 @@ const ChatWindow = ({
               )
             })}
             
+            {/* ✅ Typing Indicator - Mobile Responsive */}
             {typingUsers.length > 0 && (
-              <div className="flex items-start ml-2">
-                <div className="bg-white dark:bg-[#1A2A32] rounded-lg px-4 py-2 shadow-sm">
+              <div className="flex items-start ml-1 sm:ml-2">
+                <div className="bg-white dark:bg-[#1A2A32] rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 shadow-sm">
                   <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" />
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
                   </div>
                 </div>
               </div>
@@ -878,6 +886,7 @@ const ChatWindow = ({
         )}
       </div>
 
+      {/* ✅ Message Input - Mobile Responsive */}
       <div className="flex-shrink-0">
         <MessageInput 
           onSendMessage={handleSendMessage}
@@ -887,6 +896,7 @@ const ChatWindow = ({
         />
       </div>
 
+      {/* ✅ Forward Modal - Mobile Responsive */}
       {showForwardModal && forwardMessageData && (
         <ForwardModal 
           message={forwardMessageData}

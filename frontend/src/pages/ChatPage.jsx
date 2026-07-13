@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import MobileContactProfile from '../components/common/MobileContactProfile'
 import ChatList from '../components/chat/ChatList'
-import api from '../utils/api' // ✅ Add this
+import api from '../utils/api'
 
 const ChatPage = () => {
   const [conversations, setConversations] = useState([])
@@ -763,33 +763,42 @@ const ChatPage = () => {
     setSelectedMobileContact(null)
   }
 
-  // ✅ Mobile Profile View
+  // ✅ Mobile Profile View - FIXED: No keyboard dismissal
   const MobileProfileView = () => {
     const avatarUrl = getUserAvatar()
     
+    // ✅ Handle input focus to keep keyboard open
+    const handleInputFocus = (e) => {
+      e.stopPropagation()
+      // Scroll to input if needed
+      setTimeout(() => {
+        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 300)
+    }
+    
     return (
       <div className="flex flex-col h-full bg-white dark:bg-[#1A2A32]">
-        <div className="flex items-center px-4 py-3 bg-[#075E54] dark:bg-[#1A2A32] flex-shrink-0">
+        <div className="flex items-center px-3 sm:px-4 py-2.5 sm:py-3 bg-[#075E54] dark:bg-[#1A2A32] flex-shrink-0">
           <button 
             onClick={() => {
               setShowFullProfile(false)
               setActiveTab('chats')
               setIsEditing(false)
             }} 
-            className="text-white hover:text-white/80 transition mr-3"
+            className="text-white hover:text-white/80 transition mr-2 sm:mr-3"
           >
-            <ArrowLeft size={24} />
+            <ArrowLeft size={20} className="sm:size-24" />
           </button>
-          <h2 className="text-white text-lg font-semibold">Profile</h2>
+          <h2 className="text-white text-base sm:text-lg font-semibold">Profile</h2>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="flex flex-col items-center mb-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+          <div className="flex flex-col items-center mb-4 sm:mb-6">
             <div className="relative group">
               <img
                 src={avatarUrl}
                 alt={user?.name}
-                className="w-28 h-28 rounded-full object-cover border-4 border-[#25D366]"
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 border-[#25D366]"
                 onError={(e) => {
                   e.target.onerror = null
                   e.target.src = `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=25D366&color=fff&size=120`
@@ -798,12 +807,12 @@ const ChatPage = () => {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="absolute bottom-0 right-0 p-2 bg-[#25D366] text-white rounded-full hover:bg-[#20b858] transition shadow-lg disabled:opacity-50"
+                className="absolute bottom-0 right-0 p-1.5 sm:p-2 bg-[#25D366] text-white rounded-full hover:bg-[#20b858] transition shadow-lg disabled:opacity-50"
               >
                 {uploading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                  <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-2 border-white border-t-transparent" />
                 ) : (
-                  <Camera size={16} />
+                  <Camera size={14} className="sm:size-16" />
                 )}
               </button>
               <input
@@ -814,39 +823,45 @@ const ChatPage = () => {
                 className="hidden"
               />
             </div>
-            <h3 className="mt-3 text-xl font-semibold text-gray-800 dark:text-white">
+            <h3 className="mt-2 sm:mt-3 text-lg sm:text-xl font-semibold text-gray-800 dark:text-white">
               {editName}
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               {editAbout}
             </p>
           </div>
 
-          <div className="bg-gray-50 dark:bg-[#0B141A] rounded-xl p-4 mb-4 space-y-3">
+          <div className="bg-gray-50 dark:bg-[#0B141A] rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 space-y-2.5 sm:space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Name</span>
+              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Name</span>
               {isEditing ? (
                 <input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="text-sm bg-white dark:bg-[#1A2A32] border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1 text-gray-800 dark:text-white focus:ring-2 focus:ring-[#25D366] outline-none w-40"
+                  // ✅ Keep keyboard open
+                  onFocus={handleInputFocus}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  className="text-xs sm:text-sm bg-white dark:bg-[#1A2A32] border border-gray-300 dark:border-gray-600 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-gray-800 dark:text-white focus:ring-2 focus:ring-[#25D366] outline-none w-28 sm:w-40"
                   placeholder="Enter name"
                 />
               ) : (
-                <span className="text-sm font-medium text-gray-800 dark:text-white">{editName}</span>
+                <span className="text-xs sm:text-sm font-medium text-gray-800 dark:text-white">{editName}</span>
               )}
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-400">About</span>
+              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">About</span>
               {isEditing ? (
                 <input
                   value={editAbout}
                   onChange={(e) => setEditAbout(e.target.value)}
-                  className="text-sm bg-white dark:bg-[#1A2A32] border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1 text-gray-800 dark:text-white focus:ring-2 focus:ring-[#25D366] outline-none w-40"
+                  // ✅ Keep keyboard open
+                  onFocus={handleInputFocus}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  className="text-xs sm:text-sm bg-white dark:bg-[#1A2A32] border border-gray-300 dark:border-gray-600 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-gray-800 dark:text-white focus:ring-2 focus:ring-[#25D366] outline-none w-28 sm:w-40"
                   placeholder="Enter about"
                 />
               ) : (
-                <span className="text-sm text-gray-800 dark:text-white">{editAbout}</span>
+                <span className="text-xs sm:text-sm text-gray-800 dark:text-white">{editAbout}</span>
               )}
             </div>
             {isEditing ? (
@@ -857,30 +872,30 @@ const ChatPage = () => {
                     setEditName(user?.name || '')
                     setEditAbout(user?.about || 'Alhamdulillah ❤️')
                   }}
-                  className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
+                  className="px-2 sm:px-3 py-0.5 sm:py-1 text-xs sm:text-sm text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveProfile}
-                  className="px-3 py-1 text-sm bg-[#25D366] text-white rounded-lg hover:bg-[#20b858] transition flex items-center gap-1"
+                  className="px-2 sm:px-3 py-0.5 sm:py-1 text-xs sm:text-sm bg-[#25D366] text-white rounded-lg hover:bg-[#20b858] transition flex items-center gap-1"
                 >
-                  <Check size={14} />
+                  <Check size={12} className="sm:size-14" />
                   Save
                 </button>
               </div>
             ) : (
               <button
                 onClick={() => setIsEditing(true)}
-                className="w-full py-1.5 text-sm text-[#25D366] hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition flex items-center justify-center gap-2"
+                className="w-full py-1 sm:py-1.5 text-xs sm:text-sm text-[#25D366] hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition flex items-center justify-center gap-1.5 sm:gap-2"
               >
-                <Edit2 size={14} />
+                <Edit2 size={12} className="sm:size-14" />
                 Edit Profile
               </button>
             )}
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-0.5 sm:space-y-1">
             {[
               { icon: User, label: 'Profile' },
               { icon: Shield, label: 'Account' },
@@ -893,13 +908,13 @@ const ChatPage = () => {
                 <button
                   key={index}
                   onClick={() => toast.info(`${item.label} - Coming Soon!`, { icon: '🚀' })}
-                  className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                  className="flex items-center justify-between w-full p-2.5 sm:p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
                 >
-                  <div className="flex items-center gap-3">
-                    <Icon size={18} className="text-gray-500 dark:text-gray-400" />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{item.label}</span>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Icon size={16} className="sm:size-18 text-gray-500 dark:text-gray-400" />
+                    <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{item.label}</span>
                   </div>
-                  <ChevronRight size={16} className="text-gray-400" />
+                  <ChevronRight size={14} className="sm:size-16 text-gray-400" />
                 </button>
               )
             })}
@@ -912,14 +927,14 @@ const ChatPage = () => {
               }
               logout()
             }}
-            className="w-full mt-4 p-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition text-red-600 dark:text-red-400 flex items-center gap-3"
+            className="w-full mt-3 sm:mt-4 p-2.5 sm:p-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition text-red-600 dark:text-red-400 flex items-center gap-2 sm:gap-3"
           >
-            <LogOut size={18} />
-            <span className="text-sm font-medium">Log out</span>
+            <LogOut size={16} className="sm:size-18" />
+            <span className="text-xs sm:text-sm font-medium">Log out</span>
           </button>
         </div>
 
-        <div className="bg-[#075E54] dark:bg-[#1A2A32] flex items-center justify-around py-2 flex-shrink-0">
+        <div className="bg-[#075E54] dark:bg-[#1A2A32] flex items-center justify-around py-1.5 sm:py-2 flex-shrink-0">
           {bottomNavItems.map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
@@ -929,7 +944,7 @@ const ChatPage = () => {
               <button
                 key={item.id}
                 onClick={item.onClick}
-                className={`flex flex-col items-center gap-0.5 px-4 py-1 transition ${
+                className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-0.5 sm:py-1 transition min-w-[40px] sm:min-w-[60px] ${
                   isActive ? 'text-white' : 'text-white/60'
                 }`}
               >
@@ -937,7 +952,7 @@ const ChatPage = () => {
                   <img
                     src={avatarUrl}
                     alt="You"
-                    className={`w-6 h-6 rounded-full object-cover border-2 ${
+                    className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 ${
                       isActive ? 'border-white' : 'border-white/30'
                     }`}
                     onError={(e) => {
@@ -946,9 +961,9 @@ const ChatPage = () => {
                     }}
                   />
                 ) : (
-                  <Icon size={22} />
+                  <Icon size={18} className="sm:size-22" />
                 )}
-                <span className="text-[10px]">{item.label}</span>
+                <span className="text-[8px] sm:text-[10px] leading-3">{item.label}</span>
               </button>
             )
           })}
@@ -957,7 +972,7 @@ const ChatPage = () => {
     )
   }
 
-  // ✅ Mobile Chat List - FIXED search bar
+  // ✅ Mobile Chat List - FIXED: No keyboard dismissal
   const MobileChatList = () => {
     const avatarUrl = getUserAvatar()
     
@@ -1005,43 +1020,57 @@ const ChatPage = () => {
       setSelectedConversations([])
     }
     
+    // ✅ Handle search result click - prevents keyboard dismissal
+    const handleSearchResultClick = (result) => {
+      if (!existingUserIds.has(result._id) && !searchingUser) {
+        if (searchRef.current) {
+          const input = searchRef.current.querySelector('input')
+          if (input) {
+            setTimeout(() => input.focus(), 10)
+          }
+        }
+        startConversation(result)
+      }
+    }
+    
     return (
       <div className="flex flex-col h-full bg-[#ECE5DD] dark:bg-[#0B141A]">
-        <div className="bg-[#075E54] dark:bg-[#1A2A32] px-4 py-3 flex items-center justify-between flex-shrink-0">
-          <h1 className="text-white text-xl font-semibold">WhatsApp</h1>
-          <div className="flex items-center gap-4">
+        {/* ✅ Header - Responsive */}
+        <div className="bg-[#075E54] dark:bg-[#1A2A32] px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between flex-shrink-0">
+          <h1 className="text-white text-base sm:text-xl font-semibold">WhatsApp</h1>
+          <div className="flex items-center gap-2 sm:gap-4">
             {isSelectMode ? (
               <>
                 <button
                   onClick={handleSelectAll}
                   onTouchStart={(e) => e.preventDefault()}
                   onTouchEnd={handleSelectAll}
-                  className="text-white hover:text-white/80 transition"
+                  className="text-white hover:text-white/80 transition p-1"
                 >
                   {selectedConversations.length === conversations.length && conversations.length > 0 ? (
-                    <CheckSquare size={22} />
+                    <CheckSquare size={18} className="sm:size-22" />
                   ) : (
-                    <Square size={22} />
+                    <Square size={18} className="sm:size-22" />
                   )}
                 </button>
                 <button
                   onClick={handleDeleteSelected}
                   onTouchStart={(e) => e.preventDefault()}
                   onTouchEnd={handleDeleteSelected}
-                  className={`text-white hover:text-white/80 transition ${
+                  className={`text-white hover:text-white/80 transition p-1 ${
                     selectedConversations.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                   disabled={selectedConversations.length === 0}
                 >
-                  <Trash2 size={22} />
+                  <Trash2 size={18} className="sm:size-22" />
                 </button>
                 <button
                   onClick={handleCancelSelection}
                   onTouchStart={(e) => e.preventDefault()}
                   onTouchEnd={handleCancelSelection}
-                  className="text-white hover:text-white/80 transition"
+                  className="text-white hover:text-white/80 transition p-1"
                 >
-                  <X size={22} />
+                  <X size={18} className="sm:size-22" />
                 </button>
               </>
             ) : (
@@ -1053,37 +1082,38 @@ const ChatPage = () => {
                   className="text-white hover:text-white/80 transition p-1"
                   id="select-mode-button"
                 >
-                  <CheckSquare size={22} />
+                  <CheckSquare size={18} className="sm:size-22" />
                 </button>
                 <button 
-                  className="text-white" 
+                  className="text-white p-1" 
                   onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
                     toast.info('📷 Camera - Coming Soon!', { icon: '🚀' })
                   }}
                 >
-                  <Camera size={22} />
+                  <Camera size={18} className="sm:size-22" />
                 </button>
                 <button 
-                  className="text-white" 
+                  className="text-white p-1" 
                   onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
                     toast.info('📱 More options - Coming Soon!', { icon: '🚀' })
                   }}
                 >
-                  <MoreVertical size={22} />
+                  <MoreVertical size={18} className="sm:size-22" />
                 </button>
               </>
             )}
           </div>
         </div>
 
-        <div className="bg-[#075E54] dark:bg-[#1A2A32] px-3 pb-2 flex-shrink-0">
+        {/* ✅ Search Bar - FIXED: No keyboard dismissal */}
+        <div className="bg-[#075E54] dark:bg-[#1A2A32] px-2 sm:px-3 pb-2 flex-shrink-0">
           <div ref={searchRef} className="relative">
-            <div className="bg-white dark:bg-[#0B141A] rounded-lg px-3 py-2 flex items-center gap-2">
-              <Search size={18} className="text-gray-400" />
+            <div className="bg-white dark:bg-[#0B141A] rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 flex items-center gap-2">
+              <Search size={15} className="sm:size-18 text-gray-400" />
               <input
                 type="text"
                 value={searchQuery}
@@ -1098,13 +1128,15 @@ const ChatPage = () => {
                   }
                 }}
                 onFocus={() => {
-                  // ✅ Only show results if there's already a query
                   if (searchQuery.length >= 2) {
                     setShowSearchResults(true)
                   }
                 }}
+                // ✅ Prevent touch events from dismissing keyboard
+                onTouchStart={(e) => e.stopPropagation()}
+                onTouchEnd={(e) => e.stopPropagation()}
                 placeholder="Search by name or email..."
-                className="flex-1 bg-transparent outline-none text-sm dark:text-white placeholder-gray-400"
+                className="flex-1 bg-transparent outline-none text-xs sm:text-sm dark:text-white placeholder-gray-400 min-w-0"
               />
               {searchQuery && (
                 <button
@@ -1112,26 +1144,32 @@ const ChatPage = () => {
                     setSearchQuery('')
                     setSearchResults([])
                     setShowSearchResults(false)
-                    // ✅ Focus back on input after clearing
+                    // ✅ Keep focus on input
                     setTimeout(() => {
                       if (searchRef.current) {
                         const input = searchRef.current.querySelector('input')
                         if (input) input.focus()
                       }
-                    }, 100)
+                    }, 50)
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-gray-600 p-0.5"
                 >
-                  <X size={16} />
+                  <X size={14} className="sm:size-16" />
                 </button>
               )}
             </div>
 
+            {/* ✅ Search Results - FIXED: No keyboard dismissal */}
             {showSearchResults && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1A2A32] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-64 overflow-y-auto z-50">
+              <div 
+                className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1A2A32] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-48 sm:max-h-64 overflow-y-auto z-50"
+                // ✅ Prevent touch events from bubbling to parent
+                onTouchStart={(e) => e.stopPropagation()}
+                onTouchEnd={(e) => e.stopPropagation()}
+              >
                 {searchLoading ? (
-                  <div className="flex items-center justify-center p-4">
-                    <Loader className="animate-spin text-[#25D366]" size={24} />
+                  <div className="flex items-center justify-center p-3 sm:p-4">
+                    <Loader className="animate-spin text-[#25D366]" size={20} className="sm:size-24" />
                   </div>
                 ) : searchResults.length > 0 ? (
                   searchResults.map((result) => {
@@ -1140,34 +1178,33 @@ const ChatPage = () => {
                     return (
                       <div
                         key={result._id}
-                        className={`flex items-center justify-between p-3 ${
+                        className={`flex items-center justify-between p-2.5 sm:p-3 ${
                           isAlreadyAdded 
                             ? 'opacity-50 cursor-not-allowed' 
                             : 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
                         } transition`}
-                        onClick={() => {
-                          if (!isAlreadyAdded && !searchingUser) {
-                            startConversation(result)
-                          }
-                        }}
+                        onClick={() => handleSearchResultClick(result)}
+                        // ✅ Prevent touch events from dismissing keyboard
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onTouchEnd={(e) => e.stopPropagation()}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                           <img
                             src={result.avatar || `https://ui-avatars.com/api/?name=${result.name}&background=25D366&color=fff&size=32`}
                             alt={result.name}
-                            className="w-10 h-10 rounded-full object-cover"
+                            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover flex-shrink-0"
                             onError={(e) => {
                               e.target.onerror = null
                               e.target.src = `https://ui-avatars.com/api/?name=${result.name}&background=25D366&color=fff&size=32`
                             }}
                           />
-                          <div>
-                            <p className="font-medium text-gray-800 dark:text-white text-sm">{result.name}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{result.email}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-gray-800 dark:text-white text-xs sm:text-sm truncate">{result.name}</p>
+                            <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">{result.email}</p>
                           </div>
                         </div>
                         <button
-                          className={`p-2 rounded-lg transition flex-shrink-0 ${
+                          className={`p-1.5 sm:p-2 rounded-lg transition flex-shrink-0 ml-2 ${
                             isAlreadyAdded 
                               ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
                               : 'bg-[#25D366] text-white hover:bg-[#20b858]'
@@ -1176,23 +1213,32 @@ const ChatPage = () => {
                           onClick={(e) => {
                             e.stopPropagation()
                             if (!isAlreadyAdded) {
+                              // ✅ Keep keyboard open
+                              if (searchRef.current) {
+                                const input = searchRef.current.querySelector('input')
+                                if (input) {
+                                  setTimeout(() => input.focus(), 10)
+                                }
+                              }
                               startConversation(result)
                             }
                           }}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          onTouchEnd={(e) => e.stopPropagation()}
                         >
                           {isAlreadyAdded ? (
-                            <UserCheck size={16} />
+                            <UserCheck size={14} className="sm:size-16" />
                           ) : searchingUser ? (
-                            <Loader className="animate-spin" size={16} />
+                            <Loader className="animate-spin" size={14} className="sm:size-16" />
                           ) : (
-                            <UserPlus size={16} />
+                            <UserPlus size={14} className="sm:size-16" />
                           )}
                         </button>
                       </div>
                     )
                   })
                 ) : searchQuery.length >= 2 ? (
-                  <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                  <div className="p-3 sm:p-4 text-center text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
                     No users found
                   </div>
                 ) : null}
@@ -1201,12 +1247,13 @@ const ChatPage = () => {
           </div>
         </div>
 
+        {/* ✅ Tabs - Responsive */}
         <div className="bg-white dark:bg-[#1A2A32] border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
           <div className="flex overflow-x-auto px-2 py-1 gap-1">
             {['All', 'Unread', 'Favourites', 'Groups'].map((tab, index) => (
               <button
                 key={index}
-                className={`px-4 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition ${
+                className={`px-3 sm:px-4 py-1 text-[10px] sm:text-sm font-medium rounded-full whitespace-nowrap transition ${
                   index === 0
                     ? 'bg-[#25D366] text-white'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -1218,10 +1265,12 @@ const ChatPage = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#1A2A32] px-4 py-2 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-          <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Archived</span>
+        {/* ✅ Archived - Responsive */}
+        <div className="bg-white dark:bg-[#1A2A32] px-3 sm:px-4 py-1.5 sm:py-2 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <span className="text-[10px] sm:text-sm text-gray-500 dark:text-gray-400 font-medium">Archived</span>
         </div>
 
+        {/* ✅ Chat List - Takes remaining space */}
         <div className="flex-1 overflow-y-auto bg-white dark:bg-[#1A2A32]">
           <ChatList
             conversations={conversations}
@@ -1235,7 +1284,8 @@ const ChatPage = () => {
           />
         </div>
 
-        <div className="bg-[#075E54] dark:bg-[#1A2A32] flex items-center justify-around py-2 flex-shrink-0">
+        {/* ✅ BOTTOM NAVIGATION - FULLY RESPONSIVE */}
+        <div className="flex-shrink-0 bg-[#075E54] dark:bg-[#1A2A32] flex items-center justify-around py-1.5 sm:py-2 border-t border-white/10">
           {bottomNavItems.map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
@@ -1245,7 +1295,7 @@ const ChatPage = () => {
               <button
                 key={item.id}
                 onClick={item.onClick}
-                className={`flex flex-col items-center gap-0.5 px-4 py-1 transition ${
+                className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-0.5 sm:py-1 transition min-w-[40px] sm:min-w-[60px] ${
                   isActive ? 'text-white' : 'text-white/60'
                 }`}
               >
@@ -1253,7 +1303,7 @@ const ChatPage = () => {
                   <img
                     src={avatarUrl}
                     alt="You"
-                    className={`w-6 h-6 rounded-full object-cover border-2 ${
+                    className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 ${
                       isActive ? 'border-white' : 'border-white/30'
                     }`}
                     onError={(e) => {
@@ -1262,9 +1312,9 @@ const ChatPage = () => {
                     }}
                   />
                 ) : (
-                  <Icon size={22} />
+                  <Icon size={18} className="sm:size-22" />
                 )}
-                <span className="text-[10px]">{item.label}</span>
+                <span className="text-[8px] sm:text-[10px] leading-3">{item.label}</span>
               </button>
             )
           })}
