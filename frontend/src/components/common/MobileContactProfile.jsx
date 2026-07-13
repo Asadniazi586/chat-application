@@ -8,7 +8,7 @@ import {
   FileDown, Trash2, AlertCircle, MessageCircle,
   User, Clock, Info, ChevronRight, X, Check
 } from 'lucide-react'
-import api from '../../utils/api' // ✅ Add this
+import api from '../../utils/api'
 import toast from 'react-hot-toast'
 
 const MobileContactProfile = ({ contact, onBack, onBlock, onUnblock, onClearChat }) => {
@@ -26,7 +26,6 @@ const MobileContactProfile = ({ contact, onBack, onBlock, onUnblock, onClearChat
 
   const checkBlockStatus = async () => {
     try {
-      // ✅ FIXED: Use api instead of axios
       const response = await api.get(`/users/check-blocked/${contact._id}`)
       setIsBlocked(response.data.isBlocked)
     } catch (error) {
@@ -39,7 +38,6 @@ const MobileContactProfile = ({ contact, onBack, onBlock, onUnblock, onClearChat
     
     setLoading(true)
     try {
-      // ✅ FIXED: Use api instead of axios
       await api.post('/users/block', { userId: contact._id })
       setIsBlocked(true)
       toast.success(`${contact.name} blocked successfully`)
@@ -62,7 +60,6 @@ const MobileContactProfile = ({ contact, onBack, onBlock, onUnblock, onClearChat
     
     setLoading(true)
     try {
-      // ✅ FIXED: Use api instead of axios
       await api.post('/users/unblock', { userId: contact._id })
       setIsBlocked(false)
       toast.success(`${contact.name} unblocked successfully`)
@@ -76,20 +73,17 @@ const MobileContactProfile = ({ contact, onBack, onBlock, onUnblock, onClearChat
     }
   }
 
-  // ✅ Clear chat - WITHOUT confirm alert and WITHOUT loading text on button
   const handleClearChat = async () => {
     if (!contact) return
     
     setClearingChat(true)
     try {
-      // ✅ FIXED: Use api instead of axios
       const conversations = await api.get('/conversations')
       const conversation = conversations.data.find(conv => 
         conv.participants?.some(p => p._id === contact._id)
       )
       
       if (conversation) {
-        // ✅ FIXED: Use api instead of axios
         await api.delete(`/users/clear-chat/${conversation._id}`)
         toast.success('Chat cleared')
         
@@ -116,7 +110,6 @@ const MobileContactProfile = ({ contact, onBack, onBlock, onUnblock, onClearChat
     return contact.avatar || `https://ui-avatars.com/api/?name=${contact.name}&background=25D366&color=fff&size=80`
   }
 
-  // Menu sections - arranged professionally with Block/Clear at bottom
   const menuSections = [
     { icon: Users, label: 'Groups in common', onClick: () => toast.info('Groups in common - Coming Soon!') },
     { icon: Plus, label: `Create group with ${contact.name}`, onClick: () => toast.info('Create group - Coming Soon!') },
@@ -131,6 +124,14 @@ const MobileContactProfile = ({ contact, onBack, onBlock, onUnblock, onClearChat
       isSuccess: isBlocked,
       isLast: true
     },
+  ]
+
+  // Bottom navigation items
+  const bottomNavItems = [
+    { id: 'updates', icon: Users, label: 'Updates' },
+    { id: 'calls', icon: Phone, label: 'Calls' },
+    { id: 'chats', icon: MessageCircle, label: 'Chats' },
+    { id: 'profile', icon: User, label: 'Profile', isAvatar: true },
   ]
 
   return (
@@ -161,12 +162,10 @@ const MobileContactProfile = ({ contact, onBack, onBlock, onUnblock, onClearChat
           />
           <h3 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white">{contact.name}</h3>
           
-          {/* ✅ Show real ABOUT from user - NOT status (online/offline) */}
           <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center mt-0.5 sm:mt-1">
             {contact.about || 'Alhamdulillah ❤️'}
           </p>
 
-          {/* Action Buttons */}
           <div className="flex items-center gap-4 sm:gap-6 mt-3 sm:mt-4">
             <button className="flex flex-col items-center gap-0.5 sm:gap-1 text-gray-500 dark:text-gray-400 hover:text-[#25D366] transition">
               <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#25D366] text-white rounded-full flex items-center justify-center">
@@ -279,7 +278,7 @@ const MobileContactProfile = ({ contact, onBack, onBlock, onUnblock, onClearChat
         </div>
 
         {/* Menu Sections */}
-        <div className="py-1.5 sm:py-2">
+        <div className="py-1.5 sm:py-2 pb-20">
           {menuSections.map((item, index) => (
             <button
               key={index}
@@ -302,6 +301,51 @@ const MobileContactProfile = ({ contact, onBack, onBlock, onUnblock, onClearChat
             </button>
           ))}
         </div>
+      </div>
+
+      {/* ✅ BOTTOM NAVIGATION - Contact Profile page */}
+      <div className="contact-profile-bottom-nav">
+        {bottomNavItems.map((item) => {
+          const Icon = item.icon
+          const isActive = item.id === 'chats'
+          const isAvatar = item.isAvatar
+          
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                if (item.id === 'chats') {
+                  onBack?.()
+                } else {
+                  toast.info(`${item.label} - Coming Soon!`, { icon: '🚀' })
+                }
+              }}
+              className="bottom-nav-item flex flex-col items-center gap-0.5 px-2 sm:px-4 py-0.5 transition touch-manipulation"
+              style={{
+                minWidth: '48px',
+                minHeight: '48px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '4px 8px',
+                touchAction: 'manipulation',
+                color: isActive ? 'white' : 'rgba(255,255,255,0.6)'
+              }}
+            >
+              {isAvatar ? (
+                <img
+                  src={getAvatar()}
+                  alt="You"
+                  className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 border-white/30"
+                />
+              ) : (
+                <Icon size={20} className="sm:size-22" />
+              )}
+              <span className="text-[8px] sm:text-[10px] leading-3 font-medium">{item.label}</span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
