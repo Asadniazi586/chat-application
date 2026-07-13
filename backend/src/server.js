@@ -6,12 +6,12 @@ import { Server } from 'socket.io';
 import connectDB from './config/db.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
-// Routes
+// ✅ Import ALL routes
 import authRoutes from './routes/auth.js';
 import conversationRoutes from './routes/conversations.js';
 import messageRoutes from './routes/messages.js';
 import uploadRoutes from './routes/upload.js';
-import usersRoutes from './routes/users.js'; // ✅ This already exists
+import usersRoutes from './routes/users.js';
 
 // Load environment variables
 dotenv.config();
@@ -31,7 +31,7 @@ const io = new Server(httpServer, {
   }
 });
 
-// ✅ CORS configuration
+// CORS configuration
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
@@ -39,7 +39,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// ✅ Handle preflight requests
+// Handle preflight requests
 app.options('*', cors());
 
 app.use(express.json({ limit: '50mb' }));
@@ -51,12 +51,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ ROUTES - Each route file handles its own endpoints
-app.use('/api/auth', authRoutes);           // /api/auth/register, /api/auth/login, /api/auth/me
-app.use('/api/users', usersRoutes);          // /api/users/search, /api/users/profile, etc.
-app.use('/api/conversations', conversationRoutes);
-app.use('/api/messages', messageRoutes);
+// ✅ ✅ ✅ MOUNT ALL ROUTES - THIS IS THE FIX!
+app.use('/api/auth', authRoutes);
+app.use('/api/conversations', conversationRoutes);   // ✅ ADD THIS
+app.use('/api/messages', messageRoutes);             // ✅ ADD THIS
 app.use('/api/upload', uploadRoutes);
+app.use('/api/users', usersRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
