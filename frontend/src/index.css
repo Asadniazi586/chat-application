@@ -88,7 +88,7 @@ body {
 }
 
 /* ============================================
-   ✅ BOTTOM NAV - SAME PADDING FOR ALL PAGES
+   ✅ BOTTOM NAV - EXTRA PADDING (MORE)
    ============================================ */
 .bottom-nav {
   position: relative !important;
@@ -98,9 +98,9 @@ body {
   z-index: 10 !important;
   background: #075E54 !important;
   flex-shrink: 0 !important;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px) !important;
-  padding-top: 8px !important;
-  min-height: 60px !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px) !important;
+  padding-top: 10px !important;
+  min-height: 68px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-around !important;
@@ -110,7 +110,7 @@ body {
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .bottom-nav {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 38px) !important;
   }
 }
 
@@ -118,7 +118,7 @@ body {
   background: #1A2A32 !important;
 }
 
-/* ✅ Profile page bottom nav - SAME PADDING */
+/* ✅ Profile page bottom nav - SAME EXTRA PADDING */
 .profile-bottom-nav {
   position: relative !important;
   bottom: 0 !important;
@@ -127,9 +127,9 @@ body {
   z-index: 10 !important;
   background: #075E54 !important;
   flex-shrink: 0 !important;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px) !important;
-  padding-top: 8px !important;
-  min-height: 60px !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px) !important;
+  padding-top: 10px !important;
+  min-height: 68px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-around !important;
@@ -139,7 +139,7 @@ body {
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .profile-bottom-nav {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 38px) !important;
   }
 }
 
@@ -147,7 +147,7 @@ body {
   background: #1A2A32 !important;
 }
 
-/* ✅ Contact Profile page bottom nav - SAME PADDING */
+/* ✅ Contact Profile page bottom nav - SAME EXTRA PADDING */
 .contact-profile-bottom-nav {
   position: relative !important;
   bottom: 0 !important;
@@ -156,9 +156,9 @@ body {
   z-index: 10 !important;
   background: #075E54 !important;
   flex-shrink: 0 !important;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px) !important;
-  padding-top: 8px !important;
-  min-height: 60px !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px) !important;
+  padding-top: 10px !important;
+  min-height: 68px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-around !important;
@@ -168,7 +168,7 @@ body {
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .contact-profile-bottom-nav {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 38px) !important;
   }
 }
 
@@ -177,20 +177,20 @@ body {
 }
 
 /* ============================================
-   ✅ CHAT MESSAGES FIX - EXTRA BOTTOM PADDING
+   ✅ CHAT MESSAGES - EXTRA BOTTOM PADDING (MORE)
    ============================================ */
 .messages-container {
   flex: 1 1 auto !important;
   min-height: 0 !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 180px) !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 220px) !important;
   position: relative !important;
 }
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .messages-container {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 200px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 250px) !important;
   }
 }
 
@@ -199,12 +199,18 @@ body {
    ============================================ */
 .message-input-wrapper {
   flex-shrink: 0 !important;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4px) !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
   background: white !important;
 }
 
 [data-theme="dark"] .message-input-wrapper {
   background: #1A2A32 !important;
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .message-input-wrapper {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
+  }
 }
 
 /* ============================================
