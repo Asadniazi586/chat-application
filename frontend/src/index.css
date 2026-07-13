@@ -88,7 +88,7 @@ body {
 }
 
 /* ============================================
-   ✅ BOTTOM NAV - EXTRA PADDING (MORE)
+   ✅ BOTTOM NAV - FIXED FOR ALL BROWSERS
    ============================================ */
 .bottom-nav {
   position: relative !important;
@@ -98,7 +98,7 @@ body {
   z-index: 10 !important;
   background: #075E54 !important;
   flex-shrink: 0 !important;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px) !important;
+  padding-bottom: 32px !important;
   padding-top: 10px !important;
   min-height: 68px !important;
   display: flex !important;
@@ -108,9 +108,17 @@ body {
   margin-bottom: 0 !important;
 }
 
+/* ✅ iOS Safari specific - extra padding */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .bottom-nav {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 38px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px) !important;
+  }
+}
+
+/* ✅ Android Chrome specific */
+@media screen and (max-width: 768px) and (-webkit-min-device-pixel-ratio: 0) {
+  .bottom-nav {
+    padding-bottom: 40px !important;
   }
 }
 
@@ -118,7 +126,7 @@ body {
   background: #1A2A32 !important;
 }
 
-/* ✅ Profile page bottom nav - SAME EXTRA PADDING */
+/* ✅ Profile page bottom nav */
 .profile-bottom-nav {
   position: relative !important;
   bottom: 0 !important;
@@ -127,7 +135,7 @@ body {
   z-index: 10 !important;
   background: #075E54 !important;
   flex-shrink: 0 !important;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px) !important;
+  padding-bottom: 32px !important;
   padding-top: 10px !important;
   min-height: 68px !important;
   display: flex !important;
@@ -139,7 +147,13 @@ body {
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .profile-bottom-nav {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 38px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px) !important;
+  }
+}
+
+@media screen and (max-width: 768px) and (-webkit-min-device-pixel-ratio: 0) {
+  .profile-bottom-nav {
+    padding-bottom: 40px !important;
   }
 }
 
@@ -147,7 +161,7 @@ body {
   background: #1A2A32 !important;
 }
 
-/* ✅ Contact Profile page bottom nav - SAME EXTRA PADDING */
+/* ✅ Contact Profile page bottom nav */
 .contact-profile-bottom-nav {
   position: relative !important;
   bottom: 0 !important;
@@ -156,7 +170,7 @@ body {
   z-index: 10 !important;
   background: #075E54 !important;
   flex-shrink: 0 !important;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px) !important;
+  padding-bottom: 32px !important;
   padding-top: 10px !important;
   min-height: 68px !important;
   display: flex !important;
@@ -168,7 +182,13 @@ body {
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .contact-profile-bottom-nav {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 38px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px) !important;
+  }
+}
+
+@media screen and (max-width: 768px) and (-webkit-min-device-pixel-ratio: 0) {
+  .contact-profile-bottom-nav {
+    padding-bottom: 40px !important;
   }
 }
 
@@ -177,29 +197,35 @@ body {
 }
 
 /* ============================================
-   ✅ CHAT MESSAGES - EXTRA BOTTOM PADDING (MORE)
+   ✅ CHAT MESSAGES - EXTRA BOTTOM PADDING
    ============================================ */
 .messages-container {
   flex: 1 1 auto !important;
   min-height: 0 !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 220px) !important;
+  padding-bottom: 220px !important;
   position: relative !important;
 }
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .messages-container {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 250px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 220px) !important;
+  }
+}
+
+@media screen and (max-width: 768px) and (-webkit-min-device-pixel-ratio: 0) {
+  .messages-container {
+    padding-bottom: 240px !important;
   }
 }
 
 /* ============================================
-   ✅ MESSAGE INPUT FIX
+   ✅ MESSAGE INPUT - FIXED FOR ALL BROWSERS
    ============================================ */
 .message-input-wrapper {
   flex-shrink: 0 !important;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+  padding-bottom: 12px !important;
   background: white !important;
 }
 
@@ -210,6 +236,12 @@ body {
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .message-input-wrapper {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
+  }
+}
+
+@media screen and (max-width: 768px) and (-webkit-min-device-pixel-ratio: 0) {
+  .message-input-wrapper {
+    padding-bottom: 16px !important;
   }
 }
 
@@ -599,4 +631,17 @@ input:focus, textarea:focus {
   justify-content: center !important;
   padding: 4px 8px !important;
   touch-action: manipulation !important;
+}
+
+/* ============================================
+   ✅ MESSAGE INPUT BOX - FIXED FOR ALL BROWSERS
+   ============================================ */
+.message-input-box {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+}
+
+@media screen and (max-width: 768px) {
+  .message-input-box {
+    padding-bottom: 16px !important;
+  }
 }

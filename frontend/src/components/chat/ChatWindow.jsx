@@ -804,7 +804,8 @@ return (
       </div>
     )}
 
-    {/* ✅ Messages Container - FIXED with extra padding */}
+    
+{/* ✅ Messages Container - EXTRA BOTTOM PADDING */}
 <div 
   ref={messagesContainerRef}
   className="messages-container overflow-y-auto px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 space-y-1.5 sm:space-y-2 bg-[#ECE5DD] dark:bg-[#0B141A]"
@@ -817,6 +818,7 @@ return (
     WebkitTransform: 'translateZ(0)',
     backfaceVisibility: 'hidden',
     WebkitBackfaceVisibility: 'hidden',
+    paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 270px)'
   }}
 >
       {loading ? (
