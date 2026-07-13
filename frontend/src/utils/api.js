@@ -1,12 +1,14 @@
 import axios from 'axios';
 
-// ✅ Make sure this is correct
+// ✅ Get API URL from environment
 const API_URL = import.meta.env.VITE_API_URL || '';
+console.log('🔍 API URL:', API_URL);
 
-console.log('🔍 API URL:', API_URL); // Debug log
+// ✅ If no API URL is set, use relative path (for local development)
+const baseURL = API_URL || '/api';
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -20,7 +22,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log(`📡 ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
+    console.log(`📡 Request: ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
     return config;
   },
   (error) => Promise.reject(error)
@@ -33,9 +35,7 @@ api.interceptors.response.use(
     console.error('❌ API Error:', error.response?.status, error.response?.data);
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
