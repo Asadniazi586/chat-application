@@ -794,86 +794,86 @@ const ChatWindow = ({
         </div>
       )}
 
-      {/* ✅ Messages Container - FIXED */}
-      <div 
-        ref={messagesContainerRef}
-        className="messages-container flex-1 overflow-y-auto px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 space-y-1.5 sm:space-y-2 bg-[#ECE5DD] dark:bg-[#0B141A]"
-        id="messages-container"
-        style={{
-          WebkitOverflowScrolling: 'touch',
-          overscrollBehavior: 'contain',
-          touchAction: 'pan-y',
-        }}
-      >
-        {loading ? (
-          <div className="flex justify-center items-center h-full">
-            <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-[#25D366]" />
-          </div>
-        ) : (
-          <>
-            {messages && messages.length === 0 && (
-              <div className="flex justify-center my-6 sm:my-8">
-                <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
-                  No messages yet. Say hello! 👋
-                </p>
-              </div>
-            )}
-            {messages && messages.map((message, index) => {
-              const isOwn = message.sender?._id === user?._id
-              const isPinned = isMessagePinned(message._id)
-              const showDate = index === 0 || 
-                new Date(message.createdAt).toDateString() !== 
-                new Date(messages[index - 1]?.createdAt).toDateString()
+     {/* ✅ Messages Container - FIXED */}
+<div 
+  ref={messagesContainerRef}
+  className="messages-container overflow-y-auto px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 space-y-1.5 sm:space-y-2 bg-[#ECE5DD] dark:bg-[#0B141A]"
+  id="messages-container"
+  style={{
+    WebkitOverflowScrolling: 'touch',
+    overscrollBehavior: 'contain',
+    touchAction: 'pan-y',
+  }}
+>
+  {loading ? (
+    <div className="flex justify-center items-center h-full">
+      <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-[#25D366]" />
+    </div>
+  ) : (
+    <>
+      {messages && messages.length === 0 && (
+        <div className="flex justify-center my-6 sm:my-8">
+          <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+            No messages yet. Say hello! 👋
+          </p>
+        </div>
+      )}
+      {messages && messages.map((message, index) => {
+        const isOwn = message.sender?._id === user?._id
+        const isPinned = isMessagePinned(message._id)
+        const showDate = index === 0 || 
+          new Date(message.createdAt).toDateString() !== 
+          new Date(messages[index - 1]?.createdAt).toDateString()
 
-              return (
-                <React.Fragment key={message._id || index}>
-                  {showDate && (
-                    <div className="flex justify-center my-1.5 sm:my-2">
-                      <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
-                        {new Date(message.createdAt).toLocaleDateString([], { 
-                          weekday: 'long', 
-                          month: 'short', 
-                          day: 'numeric' 
-                        })}
-                      </span>
-                    </div>
-                  )}
-                  <div id={`msg-${message._id}`} className="w-full">
-                    <MessageBubble 
-                      message={message} 
-                      isOwn={isOwn}
-                      onDelete={handleDeleteMessage}
-                      onEdit={handleEditMessage}
-                      onForward={handleForwardMessage}
-                      onReply={handleReply}
-                      onPin={handlePin}
-                      isPinned={isPinned}
-                      onReact={handleReaction}
-                    />
-                  </div>
-                </React.Fragment>
-              )
-            })}
-            
-            {/* ✅ Typing Indicator */}
-            {typingUsers.length > 0 && (
-              <div className="flex items-start ml-1 sm:ml-2">
-                <div className="bg-white dark:bg-[#1A2A32] rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 shadow-sm">
-                  <div className="flex space-x-1">
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" />
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
-                  </div>
-                </div>
+        return (
+          <React.Fragment key={message._id || index}>
+            {showDate && (
+              <div className="flex justify-center my-1.5 sm:my-2">
+                <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
+                  {new Date(message.createdAt).toLocaleDateString([], { 
+                    weekday: 'long', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  })}
+                </span>
               </div>
             )}
-            
-            {/* ✅ Extra bottom spacing */}
-            <div className="h-20 sm:h-24" />
-            <div ref={messagesEndRef} />
-          </>
-        )}
-      </div>
+            <div id={`msg-${message._id}`} className="w-full">
+              <MessageBubble 
+                message={message} 
+                isOwn={isOwn}
+                onDelete={handleDeleteMessage}
+                onEdit={handleEditMessage}
+                onForward={handleForwardMessage}
+                onReply={handleReply}
+                onPin={handlePin}
+                isPinned={isPinned}
+                onReact={handleReaction}
+              />
+            </div>
+          </React.Fragment>
+        )
+      })}
+      
+      {/* ✅ Typing Indicator */}
+      {typingUsers.length > 0 && (
+        <div className="flex items-start ml-1 sm:ml-2">
+          <div className="bg-white dark:bg-[#1A2A32] rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 shadow-sm">
+            <div className="flex space-x-1">
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" />
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* ✅ Extra bottom spacing */}
+      <div className="h-20 sm:h-24" />
+      <div ref={messagesEndRef} />
+    </>
+  )}
+</div>
 
       {/* ✅ Message Input */}
       <div className="flex-shrink-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>

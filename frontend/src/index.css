@@ -39,7 +39,7 @@
 }
 
 /* ============================================
-   GLOBAL RESET & BASE - FIXED FOR MOBILE
+   GLOBAL RESET & BASE
    ============================================ */
 * {
   margin: 0;
@@ -88,20 +88,64 @@ body {
 }
 
 /* ============================================
-   SAFE AREA PADDING
+   ✅ BOTTOM NAV FIX
    ============================================ */
-.safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+.bottom-nav {
+  position: relative !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 10 !important;
+  background: #075E54 !important;
+  flex-shrink: 0 !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
+  padding-top: 6px !important;
+  min-height: 56px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-around !important;
+  border-top: 1px solid rgba(255,255,255,0.1) !important;
 }
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 12px);
+  .bottom-nav {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px) !important;
+  }
+}
+
+[data-theme="dark"] .bottom-nav {
+  background: #1A2A32 !important;
+}
+
+/* ============================================
+   ✅ CHAT MESSAGES FIX
+   ============================================ */
+.messages-container {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 100px) !important;
+  position: relative !important;
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .messages-container {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 120px) !important;
   }
 }
 
 /* ============================================
-   PREVENT ZOOM ON INPUT FOCUS
+   ✅ KEYBOARD FIX FOR SEARCH
+   ============================================ */
+.search-input {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  touch-action: manipulation !important;
+}
+
+/* ============================================
+   ✅ PREVENT ZOOM ON INPUT FOCUS
    ============================================ */
 input, textarea, select, button {
   font-size: 16px !important;
@@ -113,7 +157,7 @@ input:focus, textarea:focus {
 }
 
 /* ============================================
-   TOUCH MANIPULATION
+   ✅ TOUCH MANIPULATION
    ============================================ */
 .touch-manipulation {
   touch-action: manipulation;
@@ -341,58 +385,6 @@ input:focus, textarea:focus {
 }
 
 /* ============================================
-   ✅ KEYBOARD FIX FOR SEARCH
-   ============================================ */
-.search-input {
-  -webkit-user-select: text !important;
-  user-select: text !important;
-}
-
-/* ============================================
-   ✅ BOTTOM NAV FIX
-   ============================================ */
-.bottom-nav {
-  position: relative;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 10;
-  background: var(--bg-header);
-  flex-shrink: 0;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .bottom-nav {
-    padding-bottom: env(safe-area-inset-bottom, 8px);
-  }
-}
-
-/* ============================================
-   ✅ CHAT MESSAGES FIX
-   ============================================ */
-.messages-container {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
-}
-
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .messages-container {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
-  }
-}
-
-/* ============================================
-   ✅ PREVENT SCROLL ON BODY
-   ============================================ */
-.overflow-hidden {
-  overflow: hidden !important;
-}
-
-/* ============================================
    ✅ ENSURE FLEX LAYOUT WORKS ON MOBILE
    ============================================ */
 .flex-col {
@@ -412,4 +404,11 @@ input:focus, textarea:focus {
   .h-full {
     height: -webkit-fill-available;
   }
+}
+
+/* ============================================
+   ✅ PREVENT SCROLL ON BODY
+   ============================================ */
+.overflow-hidden {
+  overflow: hidden !important;
 }
