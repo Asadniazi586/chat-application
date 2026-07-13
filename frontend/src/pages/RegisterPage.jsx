@@ -56,7 +56,7 @@ const RegisterPage = () => {
       
       if (result.success) {
         // ✅ Registration successful, redirect to login
-        toast.success('Registration successful! Please login.')
+        // toast.success('Registration successful! Please login.')
         navigate('/login')
       }
       // Error is already shown by toast in AuthContext

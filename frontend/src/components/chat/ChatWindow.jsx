@@ -6,7 +6,7 @@ import MessageBubble from './MessageBubble'
 import MessageInput from './MessageInput'
 import ForwardModal from './ForwardModal'
 import ContactProfile from '../sidebar/ContactProfile'
-import axios from 'axios'
+import api from '../../utils/api' // ✅ Add this
 import toast from 'react-hot-toast'
 import { MessageCircle, Pin, X, PinOff } from 'lucide-react'
 
@@ -70,7 +70,8 @@ const ChatWindow = ({
       
       setLoading(true)
       try {
-        const response = await axios.get(`/api/messages/${conversation._id}`)
+        // ✅ FIXED: Use api instead of axios
+        const response = await api.get(`/messages/${conversation._id}`)
         setMessages(response.data || [])
         setTimeout(scrollToBottom, 100)
       } catch (error) {
@@ -709,7 +710,8 @@ const ChatWindow = ({
           onProfileClick={handleContactProfileClick}
           onClearChat={() => {
             if (conversation) {
-              axios.delete(`/api/users/clear-chat/${conversation._id}`)
+              // ✅ FIXED: Use api instead of axios
+              api.delete(`/users/clear-chat/${conversation._id}`)
                 .then(() => {
                   setMessages([])
                   toast.success('Chat cleared successfully')
@@ -722,7 +724,8 @@ const ChatWindow = ({
           }}
           onBlockUser={() => {
             if (otherUser) {
-              axios.post('/api/users/block', { userId: otherUser._id })
+              // ✅ FIXED: Use api instead of axios
+              api.post('/users/block', { userId: otherUser._id })
                 .then(() => {
                   toast.success(`${otherUser.name} blocked successfully`)
                 })
@@ -734,7 +737,8 @@ const ChatWindow = ({
           }}
           onUnblockUser={() => {
             if (otherUser) {
-              axios.post('/api/users/unblock', { userId: otherUser._id })
+              // ✅ FIXED: Use api instead of axios
+              api.post('/users/unblock', { userId: otherUser._id })
                 .then(() => {
                   toast.success(`${otherUser.name} unblocked successfully`)
                 })
