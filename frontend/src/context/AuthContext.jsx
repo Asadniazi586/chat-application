@@ -18,38 +18,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  const login = async (email, password) => {
-    try {
-      console.log('📝 Attempting login:', { email });
-
-      const response = await axios.post('/api/auth/login', { email, password });
-      console.log('✅ Login response:', response.data);
-
-      if (!response.data.success) {
-        throw new Error(response.data.message || 'Login failed');
-      }
-
-      const { token, user: userData } = response.data;
-
-      localStorage.setItem('token', token);
-      setToken(token);
-      setUser(userData);
-
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-      console.log('✅ User set:', userData);
-      console.log('✅ User ID:', userData?._id);
-
-      toast.success(`Welcome back, ${userData.name}! 🎉`);
-      return { success: true, user: userData };
-    } catch (error) {
-      console.error('❌ Login error:', error);
-      const message = error.response?.data?.message || 'Login failed. Please try again.';
-      toast.error(message);
-      return { success: false, error: message };
-    }
-  };
-
+  // ✅ REGISTER - FIXED
   const register = async (name, email, password) => {
     try {
       console.log('📝 Attempting registration:', { name, email });
@@ -57,16 +26,51 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.post('/api/auth/register', { name, email, password });
       console.log('✅ Registration response:', response.data);
 
-      if (!response.data.success) {
+      // ✅ Check if registration was successful
+      if (response.data.success === true && response.data.user) {
+        toast.success('Registration successful! Please login.');
+        return { success: true, user: response.data.user };
+      } else {
         throw new Error(response.data.message || 'Registration failed');
       }
-
-      toast.success('Registration successful! Please login.');
-      return { success: true };
     } catch (error) {
       console.error('❌ Registration error:', error);
-      console.error('❌ Error response:', error.response?.data);
       const message = error.response?.data?.message || 'Registration failed. Please try again.';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
+  // ✅ LOGIN - FIXED
+  const login = async (email, password) => {
+    try {
+      console.log('📝 Attempting login:', { email });
+
+      const response = await axios.post('/api/auth/login', { email, password });
+      console.log('✅ Login response:', response.data);
+
+      // ✅ Check if login was successful
+      if (response.data.success === true && response.data.token && response.data.user) {
+        const { token, user: userData } = response.data;
+
+        // Store token
+        localStorage.setItem('token', token);
+        setToken(token);
+        setUser(userData);
+
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+        console.log('✅ User set:', userData);
+        console.log('✅ User ID:', userData?._id);
+
+        toast.success(`Welcome back, ${userData.name}! 🎉`);
+        return { success: true, user: userData };
+      } else {
+        throw new Error(response.data.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('❌ Login error:', error);
+      const message = error.response?.data?.message || 'Login failed. Please try again.';
       toast.error(message);
       return { success: false, error: message };
     }
@@ -93,7 +97,7 @@ export const AuthProvider = ({ children }) => {
         const response = await axios.get('/api/auth/me');
         console.log('✅ User loaded:', response.data);
 
-        if (response.data.success && response.data.user) {
+        if (response.data.success === true && response.data.user) {
           setUser(response.data.user);
         } else {
           throw new Error('Invalid response format');

@@ -58,13 +58,12 @@ const RegisterPage = () => {
         // ✅ Registration successful, redirect to login
         toast.success('Registration successful! Please login.')
         navigate('/login')
-      } else {
-        // Error is already shown by toast in AuthContext
-        setLoading(false)
       }
+      // Error is already shown by toast in AuthContext
     } catch (error) {
       console.error('❌ Registration error:', error)
       toast.error(error.message || 'Registration failed. Please try again.')
+    } finally {
       setLoading(false)
     }
   }

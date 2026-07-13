@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { MessageCircle, Mail, Lock, Loader, Eye, EyeOff } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 const LoginPage = () => {
   const [email, setEmail] = useState('')
@@ -13,13 +14,33 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // ✅ Validate email
+    if (!email.trim()) {
+      toast.error('Please enter your email')
+      return
+    }
+
+    // ✅ Validate password
+    if (!password.trim()) {
+      toast.error('Please enter your password')
+      return
+    }
+
     setLoading(true)
     
-    const result = await login(email, password)
-    setLoading(false)
-    
-    if (result.success) {
-      navigate('/')
+    try {
+      const result = await login(email, password)
+      
+      if (result.success) {
+        navigate('/')
+      }
+      // Error is already shown by toast in AuthContext
+    } catch (error) {
+      console.error('❌ Login error:', error)
+      toast.error(error.message || 'Login failed. Please try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
