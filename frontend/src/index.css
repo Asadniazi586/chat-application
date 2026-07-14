@@ -108,14 +108,12 @@ body {
   margin-bottom: 0 !important;
 }
 
-/* ✅ iOS Safari specific - extra padding */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .bottom-nav {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 35px) !important;
   }
 }
 
-/* ✅ Android Chrome specific */
 @media screen and (max-width: 768px) and (-webkit-min-device-pixel-ratio: 0) {
   .bottom-nav {
     padding-bottom: 43px !important;
@@ -246,15 +244,15 @@ body {
 }
 
 /* ============================================
-   ✅ MESSAGE INPUT BOX - FIXED FOR ALL BROWSERS
+   ✅ MESSAGE INPUT BOX - REDUCED PADDING
    ============================================ */
 .message-input-box {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px) !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 30px) !important;
 }
 
 @media screen and (max-width: 768px) {
   .message-input-box {
-    padding-bottom: 85px !important;
+    padding-bottom: 35px !important;
   }
 }
 
