@@ -12,7 +12,8 @@ import {
 } from 'lucide-react'
 import MobileContactProfile from '../components/common/MobileContactProfile'
 import ChatList from '../components/chat/ChatList'
-import SearchBar from '../components/sidebar/SearchBar' // ✅ Add this import
+import SearchBar from '../components/sidebar/SearchBar'
+import ProfileEditFields from '../components/common/ProfileEditFields' // ✅ Add this import
 import api from '../utils/api'
 
 const ChatPage = () => {
@@ -28,9 +29,10 @@ const ChatPage = () => {
   const [showFullProfile, setShowFullProfile] = useState(false)
   const [showMobileContactProfile, setShowMobileContactProfile] = useState(false)
   const [selectedMobileContact, setSelectedMobileContact] = useState(null)
-  const [isEditing, setIsEditing] = useState(false)
-  const [editName, setEditName] = useState('')
-  const [editAbout, setEditAbout] = useState('')
+  // ✅ Remove isEditing, editName, editAbout - now handled by ProfileEditFields
+  // const [isEditing, setIsEditing] = useState(false)
+  // const [editName, setEditName] = useState('')
+  // const [editAbout, setEditAbout] = useState('')
   const [selectedImage, setSelectedImage] = useState(null)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef(null)
@@ -75,11 +77,9 @@ const ChatPage = () => {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // ✅ Load user data when user changes
+  // ✅ Load user data when user changes - Only for avatar
   useEffect(() => {
     if (user) {
-      setEditName(user.name || '')
-      setEditAbout(user.about || 'Alhamdulillah ❤️')
       if (user.avatar) {
         setSelectedImage(user.avatar)
       }
@@ -659,26 +659,6 @@ const ChatPage = () => {
     }
   }
 
-  // ✅ Handle save profile - ✅ FIXED
-  const handleSaveProfile = async () => {
-    try {
-      const response = await api.put('/users/profile', { 
-        name: editName, 
-        about: editAbout 
-      })
-      
-      if (setUser && response.data.user) {
-        setUser(response.data.user)
-      }
-      
-      toast.success('Profile updated!')
-      setIsEditing(false)
-    } catch (error) {
-      console.error('Profile update error:', error)
-      toast.error('Failed to update profile')
-    }
-  }
-
   // ✅ Bottom navigation items (Mobile) - FIXED
   const bottomNavItems = [
     { 
@@ -749,18 +729,9 @@ const ChatPage = () => {
     setSelectedMobileContact(null)
   }
 
-  // ✅ Mobile Profile View - FIXED: No keyboard dismissal
+  // ✅ Mobile Profile View - FIXED using ProfileEditFields component
   const MobileProfileView = () => {
     const avatarUrl = getUserAvatar()
-    
-    // ✅ Handle input focus to keep keyboard open
-    const handleInputFocus = (e) => {
-      e.stopPropagation()
-      // Scroll to input if needed
-      setTimeout(() => {
-        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }, 300)
-    }
     
     return (
       <div className="flex flex-col h-full bg-white dark:bg-[#1A2A32]">
@@ -769,7 +740,6 @@ const ChatPage = () => {
             onClick={() => {
               setShowFullProfile(false)
               setActiveTab('chats')
-              setIsEditing(false)
             }} 
             className="text-white hover:text-white/80 transition mr-2 sm:mr-3"
           >
@@ -779,6 +749,7 @@ const ChatPage = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+          {/* Avatar Section */}
           <div className="flex flex-col items-center mb-4 sm:mb-6">
             <div className="relative group">
               <img
@@ -810,77 +781,20 @@ const ChatPage = () => {
               />
             </div>
             <h3 className="mt-2 sm:mt-3 text-lg sm:text-xl font-semibold text-gray-800 dark:text-white">
-              {editName}
+              {user?.name}
             </h3>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-              {editAbout}
+              {user?.about || 'Alhamdulillah ❤️'}
             </p>
           </div>
 
-          <div className="bg-gray-50 dark:bg-[#0B141A] rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 space-y-2.5 sm:space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Name</span>
-              {isEditing ? (
-                <input
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  // ✅ Keep keyboard open
-                  onFocus={handleInputFocus}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  className="text-xs sm:text-sm bg-white dark:bg-[#1A2A32] border border-gray-300 dark:border-gray-600 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-gray-800 dark:text-white focus:ring-2 focus:ring-[#25D366] outline-none w-28 sm:w-40"
-                  placeholder="Enter name"
-                />
-              ) : (
-                <span className="text-xs sm:text-sm font-medium text-gray-800 dark:text-white">{editName}</span>
-              )}
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">About</span>
-              {isEditing ? (
-                <input
-                  value={editAbout}
-                  onChange={(e) => setEditAbout(e.target.value)}
-                  // ✅ Keep keyboard open
-                  onFocus={handleInputFocus}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  className="text-xs sm:text-sm bg-white dark:bg-[#1A2A32] border border-gray-300 dark:border-gray-600 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-gray-800 dark:text-white focus:ring-2 focus:ring-[#25D366] outline-none w-28 sm:w-40"
-                  placeholder="Enter about"
-                />
-              ) : (
-                <span className="text-xs sm:text-sm text-gray-800 dark:text-white">{editAbout}</span>
-              )}
-            </div>
-            {isEditing ? (
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() => {
-                    setIsEditing(false)
-                    setEditName(user?.name || '')
-                    setEditAbout(user?.about || 'Alhamdulillah ❤️')
-                  }}
-                  className="px-2 sm:px-3 py-0.5 sm:py-1 text-xs sm:text-sm text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveProfile}
-                  className="px-2 sm:px-3 py-0.5 sm:py-1 text-xs sm:text-sm bg-[#25D366] text-white rounded-lg hover:bg-[#20b858] transition flex items-center gap-1"
-                >
-                  <Check size={12} className="sm:size-14" />
-                  Save
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="w-full py-1 sm:py-1.5 text-xs sm:text-sm text-[#25D366] hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition flex items-center justify-center gap-1.5 sm:gap-2"
-              >
-                <Edit2 size={12} className="sm:size-14" />
-                Edit Profile
-              </button>
-            )}
-          </div>
+          {/* ✅ Profile Edit Fields - Using isolated component */}
+          <ProfileEditFields 
+            user={user} 
+            setUser={setUser}
+          />
 
+          {/* Settings List */}
           <div className="space-y-0.5 sm:space-y-1">
             {[
               { icon: User, label: 'Profile' },
@@ -906,6 +820,7 @@ const ChatPage = () => {
             })}
           </div>
 
+          {/* Logout Button */}
           <button
             onClick={() => {
               if (socket && user) {
@@ -920,7 +835,7 @@ const ChatPage = () => {
           </button>
         </div>
 
-        {/* ✅ BOTTOM NAVIGATION - Profile page (SAME PADDING as chats) */}
+        {/* ✅ BOTTOM NAVIGATION - Profile page */}
         <div className="profile-bottom-nav">
           {bottomNavItems.map((item) => {
             const Icon = item.icon
@@ -1077,17 +992,17 @@ const ChatPage = () => {
           </div>
         </div>
 
-        {/* ✅ Search Bar - Using SearchBar component with keyboard fix */}
-        <div className="bg-[#075E54] dark:bg-[#1A2A32] px-2 sm:px-3 pb-2 flex-shrink-0">
-          <SearchBar
-            onSelectConversation={handleSelectConversation}
-            showSearch={true}
-            setShowSearch={() => {}}
-            conversations={conversations}
-            setConversations={setConversations}
-            isMobile={true}
-          />
-        </div>
+     {/* ✅ Search Bar - Using SearchBar component with NO autoFocus */}
+<div className="bg-[#075E54] dark:bg-[#1A2A32] px-2 sm:px-3 pb-2 flex-shrink-0">
+  <SearchBar
+    onSelectConversation={handleSelectConversation}
+    showSearch={false} // ✅ Start with search closed
+    setShowSearch={() => {}} // ✅ No-op - prevents blinking
+    conversations={conversations}
+    setConversations={setConversations}
+    isMobile={true}
+  />
+</div>
 
         {/* ✅ Tabs - Responsive */}
         <div className="bg-white dark:bg-[#1A2A32] border-b border-gray-200 dark:border-gray-800 flex-shrink-0">

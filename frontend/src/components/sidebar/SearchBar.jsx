@@ -1,18 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react'
-import axios from 'axios'
 import { Search, X, UserPlus, Loader, UserCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
 import api from '../../utils/api'
 
-const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversations = [] }) => {
+const SearchBar = ({ 
+  onSelectConversation, 
+  showSearch, 
+  setShowSearch, 
+  conversations = [],
+  setConversations,
+  isMobile = false
+}) => {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [searching, setSearching] = useState(false)
   const { user } = useAuth()
   const searchRef = useRef(null)
-  const inputRef = useRef(null) // ✅ Add input ref
+  const inputRef = useRef(null)
 
   // ✅ Create a Set of existing user IDs from conversations
   const existingUserIds = new Set()
@@ -40,6 +46,7 @@ const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversati
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [setShowSearch])
 
+  // ✅ Search users
   useEffect(() => {
     const searchUsers = async () => {
       if (!query.trim() || query.length < 2) {
@@ -50,7 +57,7 @@ const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversati
       setLoading(true)
       try {
         console.log('🔍 Searching for:', query)
-        const response = await api.get(`/auth/search?q=${query}`)
+        const response = await api.get(`/users/search?q=${query}`)
         console.log('✅ Search results:', response.data)
         
         // Filter out current user
@@ -58,20 +65,18 @@ const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversati
         setResults(filtered)
       } catch (error) {
         console.error('❌ Search error:', error)
-        console.error('❌ Error response:', error.response?.data)
         toast.error('Failed to search users')
       } finally {
         setLoading(false)
       }
     }
 
-    const debounce = setTimeout(searchUsers, 500)
+    const debounce = setTimeout(searchUsers, 300)
     return () => clearTimeout(debounce)
   }, [query, user._id])
 
-  // ✅ Start conversation - FIXED: Keep keyboard open
+  // ✅ Start conversation - KEEP KEYBOARD OPEN
   const startConversation = async (selectedUser) => {
-    // ✅ Check if user already exists in conversations
     if (existingUserIds.has(selectedUser._id)) {
       toast.info(`Already chatting with ${selectedUser.name}`)
       setShowSearch(false)
@@ -90,15 +95,23 @@ const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversati
       const conversation = response.data
       console.log('✅ Conversation created:', conversation)
       
-      // ✅ Add conversation to sidebar WITHOUT opening chat
-      onSelectConversation(conversation, true)
+      if (onSelectConversation) {
+        onSelectConversation(conversation, true)
+      }
+      
+      if (setConversations) {
+        setConversations(prev => {
+          const exists = prev.some(c => c._id === conversation._id)
+          if (exists) return prev
+          return [conversation, ...prev]
+        })
+      }
       
       setShowSearch(false)
       setQuery('')
       setResults([])
       toast.success(`Started chat with ${selectedUser.name}`)
     } catch (error) {
-      // ✅ Handle duplicate conversation error
       if (error.response?.status === 400 && error.response?.data?.message?.includes('already exists')) {
         toast.info(`Already chatting with ${selectedUser.name}`)
         setShowSearch(false)
@@ -110,13 +123,24 @@ const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversati
       }
     } finally {
       setSearching(false)
-      // ✅ Keep keyboard open after conversation starts
+      // ✅ Keep keyboard open
       if (inputRef.current) {
         setTimeout(() => inputRef.current.focus(), 10)
       }
     }
   }
 
+  // ✅ Handle result click - KEEPS KEYBOARD OPEN
+  const handleResultClick = (result) => {
+    if (!existingUserIds.has(result._id) && !searching) {
+      if (inputRef.current) {
+        setTimeout(() => inputRef.current.focus(), 10)
+      }
+      startConversation(result)
+    }
+  }
+
+  // ✅ ALWAYS show search when showSearch is true - NO BLINKING
   if (!showSearch) {
     return (
       <div 
@@ -129,6 +153,7 @@ const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversati
     )
   }
 
+  // ✅ Show search with autoFocus only on first render, not on re-renders
   return (
     <div ref={searchRef} className="relative">
       <div className="flex items-center bg-gray-100 dark:bg-[#0B141A] rounded-lg px-3">
@@ -137,10 +162,13 @@ const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversati
           ref={inputRef}
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value
+            setQuery(value)
+          }}
           placeholder="Search by name or email..."
           className="flex-1 bg-transparent px-3 py-2 outline-none text-sm dark:text-white placeholder-gray-400"
-          autoFocus
+          // ✅ REMOVED autoFocus - prevents blinking
           autoComplete="off"
           autoCorrect="off"
           spellCheck="false"
@@ -150,7 +178,6 @@ const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversati
             onClick={() => {
               setQuery('')
               setResults([])
-              // ✅ Keep focus on input
               if (inputRef.current) {
                 setTimeout(() => inputRef.current.focus(), 50)
               }
@@ -162,7 +189,7 @@ const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversati
         )}
       </div>
 
-      {/* Search Results - FIXED: No keyboard dismissal */}
+      {/* Search Results */}
       {query.length >= 2 && (
         <div 
           className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1A2A32] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-64 overflow-y-auto z-50"
@@ -188,20 +215,12 @@ const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversati
                   onMouseDown={(e) => {
                     e.preventDefault()
                     if (!isAlreadyAdded && !searching) {
-                      // ✅ Keep keyboard open
-                      if (inputRef.current) {
-                        setTimeout(() => inputRef.current.focus(), 10)
-                      }
-                      startConversation(result)
+                      handleResultClick(result)
                     }
                   }}
                   onClick={() => {
                     if (!isAlreadyAdded && !searching) {
-                      // ✅ Keep keyboard open
-                      if (inputRef.current) {
-                        setTimeout(() => inputRef.current.focus(), 10)
-                      }
-                      startConversation(result)
+                      handleResultClick(result)
                     }
                   }}
                 >
@@ -230,22 +249,14 @@ const SearchBar = ({ onSelectConversation, showSearch, setShowSearch, conversati
                     onMouseDown={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      if (!isAlreadyAdded && !searching) {
-                        // ✅ Keep keyboard open
-                        if (inputRef.current) {
-                          setTimeout(() => inputRef.current.focus(), 10)
-                        }
-                        startConversation(result)
+                      if (!isAlreadyAdded) {
+                        handleResultClick(result)
                       }
                     }}
                     onClick={(e) => {
                       e.stopPropagation()
-                      if (!isAlreadyAdded && !searching) {
-                        // ✅ Keep keyboard open
-                        if (inputRef.current) {
-                          setTimeout(() => inputRef.current.focus(), 10)
-                        }
-                        startConversation(result)
+                      if (!isAlreadyAdded) {
+                        handleResultClick(result)
                       }
                     }}
                   >
