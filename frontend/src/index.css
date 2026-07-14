@@ -264,6 +264,52 @@ body {
 }
 
 /* ============================================
+   ✅ iOS SAFARI SPECIFIC - EXTRA PADDING FOR ALL DEVICES
+   ============================================ */
+@supports (-webkit-touch-callout: none) {
+  /* ✅ Fix for iOS bottom nav not showing */
+  .bottom-nav {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 45px) !important;
+    min-height: 72px !important;
+  }
+  
+  .profile-bottom-nav {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 45px) !important;
+    min-height: 72px !important;
+  }
+  
+  .contact-profile-bottom-nav {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 45px) !important;
+    min-height: 72px !important;
+  }
+  
+  /* ✅ Fix for iOS messages container */
+  .messages-container {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 430px) !important;
+  }
+  
+  /* ✅ Fix for iOS message input */
+  .message-input-box {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 40px) !important;
+  }
+  
+  /* ✅ Fix for iOS message input wrapper */
+  .message-input-wrapper {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px) !important;
+  }
+  
+  /* ✅ Ensure full height on iOS */
+  .h-full {
+    height: -webkit-fill-available !important;
+  }
+  
+  /* ✅ Fix for iOS bottom nav items */
+  .bottom-nav-item {
+    min-height: 52px !important;
+  }
+}
+
+/* ============================================
    ✅ CHAT HEADER DROPDOWN FIX
    ============================================ */
 .chat-header-dropdown {
