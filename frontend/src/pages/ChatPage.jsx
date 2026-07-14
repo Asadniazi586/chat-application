@@ -967,7 +967,7 @@ const ChatPage = () => {
     )
   }
 
-  // ✅ Mobile Chat List - FULLY FIXED
+  // ✅ Mobile Chat List - FULLY FIXED with search bar keyboard fix
   const MobileChatList = () => {
     const avatarUrl = getUserAvatar()
     
@@ -1104,7 +1104,7 @@ const ChatPage = () => {
           </div>
         </div>
 
-        {/* ✅ Search Bar - FIXED */}
+        {/* ✅ Search Bar - FIXED: No keyboard dismissal */}
         <div className="bg-[#075E54] dark:bg-[#1A2A32] px-2 sm:px-3 pb-2 flex-shrink-0">
           <div ref={searchRef} className="relative">
             <div className="bg-white dark:bg-[#0B141A] rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 flex items-center gap-2">

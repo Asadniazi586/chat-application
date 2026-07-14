@@ -73,9 +73,16 @@ const ChatList = ({
     }
   }, [socket, user?._id])
 
-  // ✅ Handle visibility change to refresh when coming back to chat list
+  // ✅ Handle visibility change - FIXED: Don't refresh if search input is focused
   useEffect(() => {
     const handleVisibilityChange = async () => {
+      // ✅ Don't refresh if search input is focused
+      const activeElement = document.activeElement
+      if (activeElement?.tagName === 'INPUT' && activeElement?.type === 'text') {
+        console.log('⏭️ Search input focused, skipping refresh')
+        return
+      }
+      
       if (document.visibilityState === 'visible') {
         console.log('📱 ChatList became visible - refreshing conversations')
         try {
@@ -95,20 +102,20 @@ const ChatList = ({
     }
   }, [setConversations])
 
-  // ✅ Force refresh when component mounts
-  useEffect(() => {
-    const refreshConversations = async () => {
-      try {
-        const response = await api.get('/conversations')
-        if (setConversations) {
-          setConversations(response.data)
-        }
-      } catch (error) {
-        console.error('Failed to refresh conversations:', error)
-      }
-    }
-    refreshConversations()
-  }, [setConversations])
+  // ✅ REMOVED: Force refresh on mount - was causing re-renders and keyboard dismissal
+  // useEffect(() => {
+  //   const refreshConversations = async () => {
+  //     try {
+  //       const response = await api.get('/conversations')
+  //       if (setConversations) {
+  //         setConversations(response.data)
+  //       }
+  //     } catch (error) {
+  //       console.error('Failed to refresh conversations:', error)
+  //     }
+  //   }
+  //   refreshConversations()
+  // }, [setConversations])
 
   // ✅ All other socket listeners
   useEffect(() => {
@@ -484,7 +491,6 @@ const ChatList = ({
     return null
   }
 
-  // ✅ FIXED: Handle conversation click without keyboard dismissal
   const handleConversationClick = (conversation, event) => {
     if (event) {
       event.preventDefault()

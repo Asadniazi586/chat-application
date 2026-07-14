@@ -29,19 +29,19 @@ const MessageInput = ({ onSendMessage, onTyping, replyTo, onCancelReply }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Focus input on mount
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [])
+  // ✅ REMOVED: Auto-focus on mount - causes cursor blink
+  // useEffect(() => {
+  //   if (inputRef.current) {
+  //     inputRef.current.focus()
+  //   }
+  // }, [])
 
-  // Focus input when replyTo changes
-  useEffect(() => {
-    if (replyTo && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [replyTo])
+  // ✅ REMOVED: Auto-focus when replyTo changes - causes cursor blink
+  // useEffect(() => {
+  //   if (replyTo && inputRef.current) {
+  //     inputRef.current.focus()
+  //   }
+  // }, [replyTo])
 
   // ✅ Cleanup timeout on unmount
   useEffect(() => {
@@ -112,7 +112,7 @@ const MessageInput = ({ onSendMessage, onTyping, replyTo, onCancelReply }) => {
         clearTimeout(typingTimeoutRef.current)
       }
       
-      // Focus back on input
+      // ✅ Focus back on input after sending (user initiated)
       if (inputRef.current) {
         inputRef.current.focus()
       }
