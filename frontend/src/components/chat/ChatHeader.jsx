@@ -5,7 +5,7 @@ import {
   ArrowLeft, Phone, Video, MoreVertical, 
   Info, Trash2, AlertCircle, X
 } from 'lucide-react'
-import api from '../../utils/api' // ✅ Add this
+import api from '../../utils/api'
 import toast from 'react-hot-toast'
 
 const ChatHeader = ({ 
@@ -181,41 +181,40 @@ const ChatHeader = ({
   }
 
   return (
-    <div className="flex items-center justify-between px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 bg-[#075E54] dark:bg-[#1A2A32] flex-shrink-0">
-      {/* ✅ Left Section - Back button + Avatar + Name */}
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+    <div className="flex items-center justify-between px-4 py-2 bg-[#075E54] dark:bg-[#1A2A32] flex-shrink-0">
+      <div className="flex items-center gap-3">
         {onBack && (
           <button 
             onClick={onBack} 
-            className="text-white hover:text-white/80 transition md:hidden p-1"
+            className="text-white hover:text-white/80 transition md:hidden"
           >
-            <ArrowLeft size={20} className="sm:size-22" />
+            <ArrowLeft size={22} />
           </button>
         )}
         <div 
-          className="flex items-center gap-2 sm:gap-3 cursor-pointer min-w-0 flex-1"
+          className="flex items-center gap-3 cursor-pointer"
           onClick={() => onProfileClick?.(other)}
         >
-          <div className="relative flex-shrink-0">
+          <div className="relative">
             <img
               src={avatar}
               alt={name}
-              className="w-8 h-8 sm:w-9 md:w-10 sm:h-9 md:h-10 rounded-full object-cover"
+              className="w-10 h-10 rounded-full object-cover"
               onError={(e) => {
                 e.target.onerror = null
                 e.target.src = `https://ui-avatars.com/api/?name=${name}&background=25D366&color=fff&size=40`
               }}
             />
-            {/* ✅ Green online dot - responsive */}
+            {/* ✅ Green online dot */}
             {!conversation.isGroup && !isBlocked && (
-              <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full border-2 border-[#075E54] dark:border-[#1A2A32] ${
+              <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#075E54] dark:border-[#1A2A32] ${
                 userOnline ? 'bg-[#25D366]' : 'bg-gray-400'
               }`} />
             )}
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-white font-medium text-sm sm:text-base truncate">{name}</p>
-            <p className={`text-[10px] sm:text-xs truncate ${
+          <div>
+            <p className="text-white font-medium text-sm">{name}</p>
+            <p className={`text-xs ${
               isBlocked ? 'text-red-400' : 
               userOnline ? 'text-[#25D366]' : 'text-white/70'
             }`}>
@@ -224,77 +223,54 @@ const ChatHeader = ({
           </div>
         </div>
       </div>
-
-      {/* ✅ Right Section - Action Buttons */}
-      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-        <button 
-          className="text-white hover:text-white/80 transition p-1.5 sm:p-2"
-          onClick={() => toast.info('📞 Audio call - Coming Soon!', { icon: '🚀' })}
-        >
-          <Phone size={18} className="sm:size-20" />
+      <div className="flex items-center gap-2 relative">
+        <button className="text-white hover:text-white/80 transition" onClick={() => toast.info('📞 Audio call - Coming Soon!', { icon: '🚀' })}>
+          <Phone size={20} />
+        </button>
+        <button className="text-white hover:text-white/80 transition" onClick={() => toast.info('📹 Video call - Coming Soon!', { icon: '🚀' })}>
+          <Video size={20} />
         </button>
         <button 
-          className="text-white hover:text-white/80 transition p-1.5 sm:p-2"
-          onClick={() => toast.info('📹 Video call - Coming Soon!', { icon: '🚀' })}
-        >
-          <Video size={18} className="sm:size-20" />
-        </button>
-        <button 
-          className="text-white hover:text-white/80 transition p-1.5 sm:p-2 relative"
+          className="text-white hover:text-white/80 transition"
           onClick={() => setShowDropdown(!showDropdown)}
         >
-          <MoreVertical size={18} className="sm:size-20" />
+          <MoreVertical size={20} />
         </button>
         
-      {/* ✅ Dropdown Menu - FIXED with proper positioning */}
-{showDropdown && (
-  <div 
-    ref={dropdownRef}
-    className="chat-header-dropdown"
-    style={{
-      position: 'absolute',
-      top: '100%',
-      right: '0',
-      marginTop: '4px',
-      background: 'white',
-      borderRadius: '12px',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-      minWidth: '180px',
-      zIndex: 100,
-      overflow: 'visible',
-      padding: '4px 0'
-    }}
-    onTouchStart={(e) => e.stopPropagation()}
-    onTouchEnd={(e) => e.stopPropagation()}
-  >
-    <button
-      onClick={() => {
-        setShowDropdown(false)
-        onProfileClick?.(other)
-      }}
-      className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-    >
-      <Info size={16} />
-      View Contact
-    </button>
-    <button
-      onClick={handleClearChat}
-      className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-    >
-      <Trash2 size={16} />
-      Clear Chat
-    </button>
-    {other && (
-      <button
-        onClick={handleBlockToggle}
-        className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition border-t border-gray-200 dark:border-gray-700"
-      >
-        <AlertCircle size={16} />
-        {isBlocked ? `Unblock ${other.name}` : `Block ${other.name}`}
-      </button>
-    )}
-  </div>
-)}
+        {/* ✅ Dropdown Menu */}
+        {showDropdown && (
+          <div 
+            ref={dropdownRef}
+            className="absolute top-full right-0 mt-2 bg-white dark:bg-[#1A2A32] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[200px] z-50 py-1"
+          >
+            <button
+              onClick={() => {
+                setShowDropdown(false)
+                onProfileClick?.(other)
+              }}
+              className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+            >
+              <Info size={16} />
+              View Contact
+            </button>
+            <button
+              onClick={handleClearChat}
+              className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+            >
+              <Trash2 size={16} />
+              Clear Chat
+            </button>
+            {other && (
+              <button
+                onClick={handleBlockToggle}
+                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition border-t border-gray-200 dark:border-gray-700"
+              >
+                <AlertCircle size={16} />
+                {isBlocked ? `Unblock ${other.name}` : `Block ${other.name}`}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

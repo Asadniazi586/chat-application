@@ -71,7 +71,7 @@ const MessageInput = ({ onSendMessage, onTyping, replyTo, onCancelReply }) => {
         setIsTyping(true)
       }
 
-      // ✅ Set timeout to stop typing after 5 seconds of no input (increased from 3s to 5s)
+      // ✅ Set timeout to stop typing after 5 seconds of no input
       typingTimeoutRef.current = setTimeout(() => {
         setIsTyping(false)
         lastTypingSentRef.current = 0
@@ -209,7 +209,7 @@ const MessageInput = ({ onSendMessage, onTyping, replyTo, onCancelReply }) => {
       if (onTyping) {
         onTyping(false)
       }
-    }, 5000) // ✅ Changed to 5 seconds
+    }, 5000)
     
     if (inputRef.current) {
       inputRef.current.focus()
@@ -217,56 +217,56 @@ const MessageInput = ({ onSendMessage, onTyping, replyTo, onCancelReply }) => {
   }
 
   return (
-    <div className="message-input-box relative bg-white dark:bg-[#1A2A32] border-t border-gray-200 dark:border-gray-700" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 65px)' }}>
+    <div className="relative bg-white dark:bg-[#1A2A32] border-t border-gray-200 dark:border-gray-700">
       {/* ✅ Reply Preview */}
       {replyTo && (
-        <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">↩️ Replying to:</span>
-            <span className="text-[10px] sm:text-xs text-gray-700 dark:text-gray-300 truncate">
+        <div className="flex items-center justify-between px-4 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">↩️ Replying to:</span>
+            <span className="text-xs text-gray-700 dark:text-gray-300 truncate">
               {replyTo.content}
             </span>
           </div>
           <button
             onClick={onCancelReply}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition flex-shrink-0 ml-1.5 sm:ml-2 p-0.5"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition flex-shrink-0 ml-2"
           >
-            <X size={14} className="sm:size-16" />
+            <X size={16} />
           </button>
         </div>
       )}
 
       {/* Selected File Preview */}
       {selectedFile && (
-        <div className="absolute bottom-full left-0 right-0 bg-white dark:bg-[#1A2A32] p-2 sm:p-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="absolute bottom-full left-0 right-0 bg-white dark:bg-[#1A2A32] p-3 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden">
                 {selectedFile.type.startsWith('image/') ? (
                   <img
                     src={URL.createObjectURL(selectedFile)}
                     alt="Preview"
-                    className="w-10 h-10 sm:w-12 sm:h-12 object-cover"
+                    className="w-12 h-12 object-cover"
                   />
                 ) : selectedFile.type.startsWith('video/') ? (
                   <video
                     src={URL.createObjectURL(selectedFile)}
-                    className="w-10 h-10 sm:w-12 sm:h-12 object-cover"
+                    className="w-12 h-12 object-cover"
                     muted
                   />
                 ) : (
-                  <Paperclip size={20} className="sm:size-24 text-gray-400" />
+                  <Paperclip size={24} className="text-gray-400" />
                 )}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-gray-800 dark:text-white truncate max-w-[120px] sm:max-w-[200px]">
+              <div>
+                <p className="text-sm font-medium text-gray-800 dark:text-white truncate max-w-[200px]">
                   {selectedFile.name}
                 </p>
-                <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   {(selectedFile.size / 1024).toFixed(1)} KB
                 </p>
                 {uploading && (
-                  <div className="w-20 sm:w-32 h-1 bg-gray-200 dark:bg-gray-700 rounded-full mt-1 overflow-hidden">
+                  <div className="w-32 h-1 bg-gray-200 dark:bg-gray-700 rounded-full mt-1 overflow-hidden">
                     <div 
                       className="h-full bg-[#25D366] transition-all duration-300"
                       style={{ width: `${uploadProgress}%` }}
@@ -278,35 +278,35 @@ const MessageInput = ({ onSendMessage, onTyping, replyTo, onCancelReply }) => {
             {!uploading && (
               <button
                 onClick={removeFile}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition flex-shrink-0"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition"
                 disabled={uploading}
               >
-                <X size={16} className="sm:size-18 text-gray-500" />
+                <X size={18} className="text-gray-500" />
               </button>
             )}
           </div>
         </div>
       )}
 
-      {/* Input Area - Mobile Responsive */}
-      <div className="flex items-end gap-1.5 sm:gap-2 p-2 sm:p-3">
+      {/* Input Area */}
+      <div className="flex items-end gap-2 p-3">
         {/* Emoji Button */}
-        <div ref={emojiRef} className="relative flex-shrink-0">
+        <div ref={emojiRef} className="relative">
           <button
             onClick={() => setShowEmoji(!showEmoji)}
-            className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition"
             disabled={uploading}
             type="button"
           >
-            <Smile size={20} className="sm:size-24 text-gray-500 dark:text-gray-400" />
+            <Smile size={24} className="text-gray-500 dark:text-gray-400" />
           </button>
           
           {showEmoji && (
             <div className="absolute bottom-full left-0 mb-2 z-50">
               <EmojiPicker
                 onEmojiClick={handleEmojiClick}
-                width={280}
-                height={350}
+                width={320}
+                height={400}
                 className="emoji-picker"
                 theme={document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'}
               />
@@ -317,11 +317,11 @@ const MessageInput = ({ onSendMessage, onTyping, replyTo, onCancelReply }) => {
         {/* File Upload Button */}
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition flex-shrink-0"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition"
           disabled={uploading}
           type="button"
         >
-          <Paperclip size={20} className="sm:size-24 text-gray-500 dark:text-gray-400" />
+          <Paperclip size={24} className="text-gray-500 dark:text-gray-400" />
         </button>
         <input
           ref={fileInputRef}
@@ -338,17 +338,17 @@ const MessageInput = ({ onSendMessage, onTyping, replyTo, onCancelReply }) => {
           onChange={(e) => handleTyping(e.target.value)}
           onKeyDown={handleKeyPress}
           placeholder={uploading ? `Uploading... ${uploadProgress}%` : 'Type a message...'}
-          className="flex-1 resize-none bg-gray-100 dark:bg-[#0B141A] rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 outline-none text-xs sm:text-sm dark:text-white placeholder-gray-400 max-h-28 sm:max-h-32 min-h-[36px] sm:min-h-[42px]"
+          className="flex-1 resize-none bg-gray-100 dark:bg-[#0B141A] rounded-lg px-4 py-2 outline-none text-sm dark:text-white placeholder-gray-400 max-h-32 min-h-[42px]"
           rows={1}
           disabled={uploading}
-          style={{ height: '36px' }}
+          style={{ height: '42px' }}
         />
 
         {/* Send Button */}
         <button
           onClick={handleSend}
           disabled={(!message.trim() && !selectedFile) || uploading}
-          className={`p-1.5 sm:p-2 rounded-full transition flex-shrink-0 ${
+          className={`p-2 rounded-full transition flex-shrink-0 ${
             message.trim() || selectedFile
               ? 'bg-[#25D366] hover:bg-[#20b858] text-white'
               : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
@@ -356,9 +356,9 @@ const MessageInput = ({ onSendMessage, onTyping, replyTo, onCancelReply }) => {
           type="button"
         >
           {uploading ? (
-            <Loader size={18} className="sm:size-20 animate-spin" />
+            <Loader size={20} className="animate-spin" />
           ) : (
-            <Send size={18} className="sm:size-20" />
+            <Send size={20} />
           )}
         </button>
       </div>

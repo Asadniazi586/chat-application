@@ -88,7 +88,7 @@ body {
 }
 
 /* ============================================
-   ✅ BOTTOM NAV - FIXED FOR ALL BROWSERS
+   ✅ BOTTOM NAV - DEFAULT (DESKTOP)
    ============================================ */
 .bottom-nav {
   position: relative !important;
@@ -112,7 +112,6 @@ body {
   background: #1A2A32 !important;
 }
 
-/* ✅ Profile page bottom nav */
 .profile-bottom-nav {
   position: relative !important;
   bottom: 0 !important;
@@ -135,7 +134,6 @@ body {
   background: #1A2A32 !important;
 }
 
-/* ✅ Contact Profile page bottom nav */
 .contact-profile-bottom-nav {
   position: relative !important;
   bottom: 0 !important;
@@ -166,7 +164,7 @@ body {
   min-height: 0 !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  padding-bottom: 16px !important;
+  padding-bottom: 12px !important;
   position: relative !important;
 }
 
@@ -183,9 +181,6 @@ body {
   background: #1A2A32 !important;
 }
 
-/* ============================================
-   ✅ MESSAGE INPUT BOX - DEFAULT (DESKTOP)
-   ============================================ */
 .message-input-box {
   padding-bottom: 4px !important;
 }
@@ -193,18 +188,15 @@ body {
 /* ============================================
    ✅ MOBILE ONLY - ALL PADDING OVERRIDES
    ============================================ */
-@media screen and (max-width: 768px) {
-  /* Bottom Nav - Mobile */
+@media only screen and (max-width: 768px) {
   .bottom-nav {
     padding-bottom: 35px !important;
     padding-top: 10px !important;
     min-height: 68px !important;
   }
   
-  @supports (padding-bottom: env(safe-area-inset-bottom)) {
-    .bottom-nav {
-      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 35px) !important;
-    }
+  .bottom-nav {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 35px) !important;
   }
 
   .profile-bottom-nav {
@@ -213,10 +205,8 @@ body {
     min-height: 68px !important;
   }
   
-  @supports (padding-bottom: env(safe-area-inset-bottom)) {
-    .profile-bottom-nav {
-      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 35px) !important;
-    }
+  .profile-bottom-nav {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 35px) !important;
   }
 
   .contact-profile-bottom-nav {
@@ -225,43 +215,32 @@ body {
     min-height: 68px !important;
   }
   
-  @supports (padding-bottom: env(safe-area-inset-bottom)) {
-    .contact-profile-bottom-nav {
-      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 35px) !important;
-    }
+  .contact-profile-bottom-nav {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 35px) !important;
   }
 
-  /* Messages Container - Mobile */
   .messages-container {
     padding-bottom: 400px !important;
   }
   
-  @supports (padding-bottom: env(safe-area-inset-bottom)) {
-    .messages-container {
-      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 400px) !important;
-    }
+  .messages-container {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 400px) !important;
   }
 
-  /* Message Input Wrapper - Mobile */
   .message-input-wrapper {
     padding-bottom: 12px !important;
   }
   
-  @supports (padding-bottom: env(safe-area-inset-bottom)) {
-    .message-input-wrapper {
-      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
-    }
+  .message-input-wrapper {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
   }
 
-  /* Message Input Box - Mobile */
   .message-input-box {
     padding-bottom: 30px !important;
   }
   
-  @supports (padding-bottom: env(safe-area-inset-bottom)) {
-    .message-input-box {
-      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 30px) !important;
-    }
+  .message-input-box {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 30px) !important;
   }
 
   /* Android Chrome specific */
@@ -386,9 +365,6 @@ input:focus, textarea:focus {
   will-change: transform !important;
 }
 
-/* ============================================
-   ✅ CHAT CONTAINER FIX - PREVENT ZOOM
-   ============================================ */
 .chat-container {
   height: 100% !important;
   width: 100% !important;
