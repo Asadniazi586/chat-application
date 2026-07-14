@@ -992,12 +992,10 @@ const ChatPage = () => {
           </div>
         </div>
 
-     {/* ✅ Search Bar - Using SearchBar component with NO autoFocus */}
+{/* ✅ Search Bar - Using internal state (NO blinking) */}
 <div className="bg-[#075E54] dark:bg-[#1A2A32] px-2 sm:px-3 pb-2 flex-shrink-0">
   <SearchBar
     onSelectConversation={handleSelectConversation}
-    showSearch={false} // ✅ Start with search closed
-    setShowSearch={() => {}} // ✅ No-op - prevents blinking
     conversations={conversations}
     setConversations={setConversations}
     isMobile={true}

@@ -6,12 +6,12 @@ import api from '../../utils/api'
 
 const SearchBar = ({ 
   onSelectConversation, 
-  showSearch, 
-  setShowSearch, 
   conversations = [],
   setConversations,
   isMobile = false
 }) => {
+  // ✅ State is now internal - NOT controlled by parent
+  const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
@@ -36,7 +36,7 @@ const SearchBar = ({
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setShowSearch(false)
+        setIsOpen(false)
         setResults([])
         setQuery('')
       }
@@ -44,7 +44,16 @@ const SearchBar = ({
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [setShowSearch])
+  }, [])
+
+  // ✅ Focus input when search opens (only when user clicks)
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 100)
+    }
+  }, [isOpen])
 
   // ✅ Search users
   useEffect(() => {
@@ -60,7 +69,6 @@ const SearchBar = ({
         const response = await api.get(`/users/search?q=${query}`)
         console.log('✅ Search results:', response.data)
         
-        // Filter out current user
         const filtered = response.data.filter(u => u._id !== user._id)
         setResults(filtered)
       } catch (error) {
@@ -79,7 +87,7 @@ const SearchBar = ({
   const startConversation = async (selectedUser) => {
     if (existingUserIds.has(selectedUser._id)) {
       toast.info(`Already chatting with ${selectedUser.name}`)
-      setShowSearch(false)
+      setIsOpen(false)
       setQuery('')
       setResults([])
       return
@@ -107,14 +115,14 @@ const SearchBar = ({
         })
       }
       
-      setShowSearch(false)
+      setIsOpen(false)
       setQuery('')
       setResults([])
       toast.success(`Started chat with ${selectedUser.name}`)
     } catch (error) {
       if (error.response?.status === 400 && error.response?.data?.message?.includes('already exists')) {
         toast.info(`Already chatting with ${selectedUser.name}`)
-        setShowSearch(false)
+        setIsOpen(false)
         setQuery('')
         setResults([])
       } else {
@@ -123,7 +131,6 @@ const SearchBar = ({
       }
     } finally {
       setSearching(false)
-      // ✅ Keep keyboard open
       if (inputRef.current) {
         setTimeout(() => inputRef.current.focus(), 10)
       }
@@ -140,12 +147,22 @@ const SearchBar = ({
     }
   }
 
-  // ✅ ALWAYS show search when showSearch is true - NO BLINKING
-  if (!showSearch) {
+  // ✅ Handle opening the search bar
+  const handleOpenSearch = () => {
+    setIsOpen(true)
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus()
+      }
+    }, 100)
+  }
+
+  // ✅ Closed state - Search bar not visible
+  if (!isOpen) {
     return (
       <div 
         className="flex items-center gap-3 px-4 py-2 bg-gray-100 dark:bg-[#0B141A] rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-        onClick={() => setShowSearch(true)}
+        onClick={handleOpenSearch}
       >
         <Search size={18} className="text-gray-500" />
         <span className="text-gray-500 dark:text-gray-400 text-sm">Search or start new chat</span>
@@ -153,7 +170,7 @@ const SearchBar = ({
     )
   }
 
-  // ✅ Show search with autoFocus only on first render, not on re-renders
+  // ✅ Open state - Search bar visible
   return (
     <div ref={searchRef} className="relative">
       <div className="flex items-center bg-gray-100 dark:bg-[#0B141A] rounded-lg px-3">
@@ -168,7 +185,6 @@ const SearchBar = ({
           }}
           placeholder="Search by name or email..."
           className="flex-1 bg-transparent px-3 py-2 outline-none text-sm dark:text-white placeholder-gray-400"
-          // ✅ REMOVED autoFocus - prevents blinking
           autoComplete="off"
           autoCorrect="off"
           spellCheck="false"
