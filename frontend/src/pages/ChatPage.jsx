@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import MobileContactProfile from '../components/common/MobileContactProfile'
 import ChatList from '../components/chat/ChatList'
+import SearchBar from '../components/sidebar/SearchBar' // ✅ Add this import
 import api from '../utils/api'
 
 const ChatPage = () => {
@@ -34,7 +35,7 @@ const ChatPage = () => {
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef(null)
   
-  // Search states
+  // Search states - These are still needed for desktop but mobile now uses SearchBar component
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -295,7 +296,7 @@ const ChatPage = () => {
   // Make available in console
   window.manualRefresh = manualRefresh
 
-  // ✅ Search users - Updated to not clear on empty - ✅ FIXED
+  // ✅ Search users - Desktop only (mobile uses SearchBar component)
   useEffect(() => {
     const searchUsers = async () => {
       if (!searchQuery.trim() || searchQuery.length < 2) {
@@ -320,21 +321,6 @@ const ChatPage = () => {
     const debounce = setTimeout(searchUsers, 500)
     return () => clearTimeout(debounce)
   }, [searchQuery, user?._id])
-
-  // ✅ Click outside search results - DON'T clear search text
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setShowSearchResults(false)
-        // ✅ Don't clear searchQuery - keep the text
-        // setSearchQuery('')
-        // setSearchResults([])
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   // ✅ Updated handleSelectConversation with dontOpenChat flag - ✅ FIXED
   const handleSelectConversation = async (conversation, dontOpenChat = false) => {
@@ -967,7 +953,7 @@ const ChatPage = () => {
     )
   }
 
-  // ✅ Mobile Chat List - FULLY FIXED with search bar keyboard fix
+  // ✅ Mobile Chat List - Using SearchBar component for search
   const MobileChatList = () => {
     const avatarUrl = getUserAvatar()
     
@@ -1013,19 +999,6 @@ const ChatPage = () => {
       console.log('📱 Cancel selection clicked')
       setIsSelectMode(false)
       setSelectedConversations([])
-    }
-    
-    // ✅ Handle search result click - prevents keyboard dismissal
-    const handleSearchResultClick = (result) => {
-      if (!existingUserIds.has(result._id) && !searchingUser) {
-        if (searchRef.current) {
-          const input = searchRef.current.querySelector('input')
-          if (input) {
-            setTimeout(() => input.focus(), 10)
-          }
-        }
-        startConversation(result)
-      }
     }
     
     return (
@@ -1104,127 +1077,16 @@ const ChatPage = () => {
           </div>
         </div>
 
-        {/* ✅ Search Bar - FIXED: No keyboard dismissal */}
+        {/* ✅ Search Bar - Using SearchBar component with keyboard fix */}
         <div className="bg-[#075E54] dark:bg-[#1A2A32] px-2 sm:px-3 pb-2 flex-shrink-0">
-          <div ref={searchRef} className="relative">
-            <div className="bg-white dark:bg-[#0B141A] rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 flex items-center gap-2">
-              <Search size={15} className="sm:size-18 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  const value = e.target.value
-                  setSearchQuery(value)
-                  if (value.length >= 2) {
-                    setShowSearchResults(true)
-                  } else {
-                    setShowSearchResults(false)
-                    setSearchResults([])
-                  }
-                }}
-                onFocus={() => {
-                  if (searchQuery.length >= 2) {
-                    setShowSearchResults(true)
-                  }
-                }}
-                placeholder="Search by name or email..."
-                className="search-input flex-1 bg-transparent outline-none text-xs sm:text-sm dark:text-white placeholder-gray-400 min-w-0"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => {
-                    setSearchQuery('')
-                    setSearchResults([])
-                    setShowSearchResults(false)
-                    setTimeout(() => {
-                      if (searchRef.current) {
-                        const input = searchRef.current.querySelector('input')
-                        if (input) input.focus()
-                      }
-                    }, 50)
-                  }}
-                  className="text-gray-400 hover:text-gray-600 p-0.5"
-                >
-                  <X size={14} className="sm:size-16" />
-                </button>
-              )}
-            </div>
-
-            {/* ✅ Search Results */}
-            {showSearchResults && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1A2A32] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-48 sm:max-h-64 overflow-y-auto z-50">
-                {searchLoading ? (
-                  <div className="flex items-center justify-center p-3 sm:p-4">
-                    <Loader className="animate-spin text-[#25D366]" size={20} />
-                  </div>
-                ) : searchResults.length > 0 ? (
-                  searchResults.map((result) => {
-                    const isAlreadyAdded = existingUserIds.has(result._id)
-                    
-                    return (
-                      <div
-                        key={result._id}
-                        className={`flex items-center justify-between p-2.5 sm:p-3 ${
-                          isAlreadyAdded 
-                            ? 'opacity-50 cursor-not-allowed' 
-                            : 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
-                        } transition`}
-                        onClick={() => handleSearchResultClick(result)}
-                      >
-                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                          <img
-                            src={result.avatar || `https://ui-avatars.com/api/?name=${result.name}&background=25D366&color=fff&size=32`}
-                            alt={result.name}
-                            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover flex-shrink-0"
-                            onError={(e) => {
-                              e.target.onerror = null
-                              e.target.src = `https://ui-avatars.com/api/?name=${result.name}&background=25D366&color=fff&size=32`
-                            }}
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-gray-800 dark:text-white text-xs sm:text-sm truncate">{result.name}</p>
-                            <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">{result.email}</p>
-                          </div>
-                        </div>
-                        <button
-                          className={`p-1.5 sm:p-2 rounded-lg transition flex-shrink-0 ml-2 ${
-                            isAlreadyAdded 
-                              ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
-                              : 'bg-[#25D366] text-white hover:bg-[#20b858]'
-                          }`}
-                          disabled={isAlreadyAdded || searchingUser}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (!isAlreadyAdded) {
-                              if (searchRef.current) {
-                                const input = searchRef.current.querySelector('input')
-                                if (input) {
-                                  setTimeout(() => input.focus(), 10)
-                                }
-                              }
-                              startConversation(result)
-                            }
-                          }}
-                        >
-                          {isAlreadyAdded ? (
-                            <UserCheck size={14} className="sm:size-16" />
-                          ) : searchingUser ? (
-                            <Loader className="animate-spin" size={14} />
-                          ) : (
-                            <UserPlus size={14} className="sm:size-16" />
-                          )}
-                        </button>
-                      </div>
-                    )
-                  })
-                ) : searchQuery.length >= 2 ? (
-                  <div className="p-3 sm:p-4 text-center text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
-                    No users found
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
+          <SearchBar
+            onSelectConversation={handleSelectConversation}
+            showSearch={true}
+            setShowSearch={() => {}}
+            conversations={conversations}
+            setConversations={setConversations}
+            isMobile={true}
+          />
         </div>
 
         {/* ✅ Tabs - Responsive */}

@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, memo } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useSocket } from '../../hooks/useSocket'
 import { CheckCheck, MessageCircle, CheckSquare, Square, Pin, Clock } from 'lucide-react'
 import api from '../../utils/api'
 
-const ChatList = ({ 
+// ✅ Wrap with React.memo to prevent re-renders when searchQuery changes
+const ChatList = memo(({ 
   conversations, 
   currentConversation, 
   onSelectConversation, 
@@ -73,12 +74,14 @@ const ChatList = ({
     }
   }, [socket, user?._id])
 
-  // ✅ Handle visibility change - FIXED: Don't refresh if search input is focused
+  // ✅ Handle visibility change - Don't refresh if search input is focused
   useEffect(() => {
     const handleVisibilityChange = async () => {
-      // ✅ Don't refresh if search input is focused
+      // ✅ Check if search input is focused
       const activeElement = document.activeElement
-      if (activeElement?.tagName === 'INPUT' && activeElement?.type === 'text') {
+      const searchInput = document.getElementById('search-input-field')
+      
+      if (activeElement === searchInput) {
         console.log('⏭️ Search input focused, skipping refresh')
         return
       }
@@ -101,21 +104,6 @@ const ChatList = ({
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [setConversations])
-
-  // ✅ REMOVED: Force refresh on mount - was causing re-renders and keyboard dismissal
-  // useEffect(() => {
-  //   const refreshConversations = async () => {
-  //     try {
-  //       const response = await api.get('/conversations')
-  //       if (setConversations) {
-  //         setConversations(response.data)
-  //       }
-  //     } catch (error) {
-  //       console.error('Failed to refresh conversations:', error)
-  //     }
-  //   }
-  //   refreshConversations()
-  // }, [setConversations])
 
   // ✅ All other socket listeners
   useEffect(() => {
@@ -342,44 +330,23 @@ const ChatList = ({
     }
   }, [socket, user, setConversations])
 
-  // ✅ Reorder conversations based on updatedAt
+  // ✅ FIXED: Only reorder when conversations actually change
   useEffect(() => {
-    if (conversations && conversations.length > 0) {
-      const sorted = [...conversations].sort((a, b) => {
-        const timeA = new Date(a.updatedAt || a.lastMessageTime || 0).getTime()
-        const timeB = new Date(b.updatedAt || b.lastMessageTime || 0).getTime()
-        return timeB - timeA
-      })
-      
-      if (JSON.stringify(sorted.map(c => c._id)) !== JSON.stringify(conversations.map(c => c._id))) {
-        setConversations(sorted)
-      }
+    if (!conversations || conversations.length === 0) return
+    
+    const sorted = [...conversations].sort((a, b) => {
+      const timeA = new Date(a.updatedAt || a.lastMessageTime || 0).getTime()
+      const timeB = new Date(b.updatedAt || b.lastMessageTime || 0).getTime()
+      return timeB - timeA
+    })
+    
+    const currentIds = conversations.map(c => c._id).join(',')
+    const sortedIds = sorted.map(c => c._id).join(',')
+    
+    if (currentIds !== sortedIds && setConversations) {
+      setConversations(sorted)
     }
   }, [conversations, setConversations])
-
-  useEffect(() => {
-    if (conversations && conversations.length > 0) {
-      const onlineFromConversations = conversations
-        .filter(conv => !conv.isGroup)
-        .map(conv => {
-          const other = conv.participants?.find(p => p._id !== user._id)
-          return other?.status === 'online' ? other._id : null
-        })
-        .filter(id => id !== null)
-
-      if (onlineFromConversations.length > 0) {
-        setOnlineUsers(prev => {
-          const newUsers = [...prev]
-          onlineFromConversations.forEach(id => {
-            if (!newUsers.includes(id)) {
-              newUsers.push(id)
-            }
-          })
-          return newUsers
-        })
-      }
-    }
-  }, [conversations, user._id])
 
   const getOtherParticipant = (conversation) => {
     if (conversation.isGroup) return null
@@ -648,6 +615,9 @@ const ChatList = ({
       })}
     </div>
   )
-}
+})
+
+// ✅ Add display name for debugging
+ChatList.displayName = 'ChatList'
 
 export default ChatList
