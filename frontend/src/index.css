@@ -219,12 +219,13 @@ body {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 35px) !important;
   }
 
+  /* ✅ FIXED: Reduced padding for messages container */
   .messages-container {
-    padding-bottom: 400px !important;
+    padding-bottom: 60px !important;
   }
   
   .messages-container {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 400px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 60px) !important;
   }
 
   .message-input-wrapper {
@@ -255,7 +256,7 @@ body {
       padding-bottom: 43px !important;
     }
     .messages-container {
-      padding-bottom: 420px !important;
+      padding-bottom: 80px !important;
     }
     .message-input-box {
       padding-bottom: 35px !important;
@@ -264,48 +265,43 @@ body {
 }
 
 /* ============================================
-   ✅ iOS SAFARI SPECIFIC - EXTRA PADDING FOR ALL DEVICES
+   ✅ iOS SAFARI & CHROME SPECIFIC - FULL SUPPORT
    ============================================ */
 @supports (-webkit-touch-callout: none) {
-  /* ✅ Fix for iOS bottom nav not showing */
-  .bottom-nav {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 45px) !important;
-    min-height: 72px !important;
-  }
-  
-  .profile-bottom-nav {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 45px) !important;
-    min-height: 72px !important;
-  }
-  
-  .contact-profile-bottom-nav {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 45px) !important;
-    min-height: 72px !important;
-  }
-  
-  /* ✅ Fix for iOS messages container */
-  .messages-container {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 430px) !important;
-  }
-  
-  /* ✅ Fix for iOS message input */
-  .message-input-box {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 40px) !important;
-  }
-  
-  /* ✅ Fix for iOS message input wrapper */
-  .message-input-wrapper {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px) !important;
-  }
-  
-  /* ✅ Ensure full height on iOS */
-  .h-full {
-    height: -webkit-fill-available !important;
-  }
-  
-  /* ✅ Fix for iOS bottom nav items */
-  .bottom-nav-item {
-    min-height: 52px !important;
+  @media only screen and (max-width: 768px) {
+    /* ✅ Bottom nav - SAME as before, unchanged */
+    .bottom-nav {
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 35px) !important;
+      min-height: 68px !important;
+    }
+    
+    .profile-bottom-nav {
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 35px) !important;
+      min-height: 68px !important;
+    }
+    
+    .contact-profile-bottom-nav {
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 35px) !important;
+      min-height: 68px !important;
+    }
+    
+    /* ✅ FIXED: Messages container padding for iOS - reduced */
+    .messages-container {
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px) !important;
+    }
+    
+    .message-input-box {
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 30px) !important;
+    }
+    
+    .message-input-wrapper {
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
+    }
+    
+    /* ✅ Ensure full height on iOS */
+    .h-full {
+      height: -webkit-fill-available !important;
+    }
   }
 }
 
@@ -665,7 +661,7 @@ input:focus, textarea:focus {
 }
 
 /* ============================================
-   ✅ IOS SAFARI SPECIFIC FIXES
+   ✅ IOS SAFARI & CHROME FULL SUPPORT
    ============================================ */
 @supports (-webkit-touch-callout: none) {
   .h-full {

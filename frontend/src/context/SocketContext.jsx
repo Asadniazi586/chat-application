@@ -5,12 +5,14 @@ export const SocketContext = createContext()
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null)
-  const [isConnected, setIsConnected] = useState(false)
+  // ✅ FIXED: Changed from false to null - null = connecting, true = connected, false = disconnected
+  const [isConnected, setIsConnected] = useState(null)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) {
       console.log('No token found, skipping socket connection')
+      setIsConnected(false)
       return
     }
 

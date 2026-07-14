@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { X, Send, Check, Loader } from 'lucide-react'
-import axios from 'axios'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
 import { useSocket } from '../../hooks/useSocket'
+import api from '../../utils/api' // ✅ Add this import
 
 const ForwardModal = ({ message, onClose, onForward, setConversations }) => {
   const [conversations, setConversationsLocal] = useState([])
@@ -17,7 +17,10 @@ const ForwardModal = ({ message, onClose, onForward, setConversations }) => {
     const loadConversations = async () => {
       setLoading(true)
       try {
-        const response = await axios.get('/api/conversations')
+        // ✅ FIXED: Use api instead of axios
+        const response = await api.get('/conversations')
+        console.log('📥 Conversations loaded:', response.data.length)
+        
         // Filter out current conversation
         const filtered = response.data.filter(
           conv => conv._id !== message.conversation
@@ -50,14 +53,16 @@ const ForwardModal = ({ message, onClose, onForward, setConversations }) => {
     setSending(true)
     try {
       for (const convId of selectedIds) {
-        await axios.post(`/api/messages/${message._id}/forward`, {
+        // ✅ FIXED: Use api instead of axios
+        await api.post(`/messages/${message._id}/forward`, {
           conversationId: convId
         })
       }
       
       // ✅ Update conversations immediately
       if (setConversations) {
-        const response = await axios.get('/api/conversations')
+        // ✅ FIXED: Use api instead of axios
+        const response = await api.get('/conversations')
         setConversations(response.data)
       }
       
@@ -98,6 +103,12 @@ const ForwardModal = ({ message, onClose, onForward, setConversations }) => {
     return other?.avatar || `https://ui-avatars.com/api/?name=${other?.name || 'U'}&background=25D366&color=fff&size=32`
   }
 
+  // ✅ Get other participant for better display
+  const getOtherParticipant = (conv) => {
+    if (conv.isGroup) return null
+    return conv.participants?.find(p => p._id !== user._id)
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white dark:bg-[#1A2A32] rounded-2xl max-w-md w-full mx-auto shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -129,15 +140,22 @@ const ForwardModal = ({ message, onClose, onForward, setConversations }) => {
               <Loader className="animate-spin text-[#25D366]" size={32} />
             </div>
           ) : conversations.length === 0 ? (
-            <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-              No conversations to forward to
-            </p>
+            <div className="text-center py-8">
+              <p className="text-gray-500 dark:text-gray-400">
+                No conversations to forward to
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Start a new chat first
+              </p>
+            </div>
           ) : (
             <div className="space-y-2">
               {conversations.map((conv) => {
                 const isSelected = selectedIds.includes(conv._id)
                 const name = getConversationName(conv)
                 const avatar = getConversationAvatar(conv)
+                const other = getOtherParticipant(conv)
+                const lastMessage = conv.lastMessage?.content || 'No messages yet'
                 
                 return (
                   <button
@@ -161,6 +179,9 @@ const ForwardModal = ({ message, onClose, onForward, setConversations }) => {
                     <div className="flex-1 text-left min-w-0">
                       <p className="font-medium text-gray-800 dark:text-white text-sm truncate">
                         {name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {lastMessage}
                       </p>
                     </div>
                     {isSelected && (
