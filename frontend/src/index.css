@@ -98,7 +98,7 @@ body {
   z-index: 10 !important;
   background: #075E54 !important;
   flex-shrink: 0 !important;
-  padding-bottom: 32px !important;
+  padding-bottom: 35px !important;
   padding-top: 10px !important;
   min-height: 68px !important;
   display: flex !important;
@@ -111,14 +111,14 @@ body {
 /* ✅ iOS Safari specific - extra padding */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .bottom-nav {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 35px) !important;
   }
 }
 
 /* ✅ Android Chrome specific */
 @media screen and (max-width: 768px) and (-webkit-min-device-pixel-ratio: 0) {
   .bottom-nav {
-    padding-bottom: 40px !important;
+    padding-bottom: 43px !important;
   }
 }
 
@@ -135,7 +135,7 @@ body {
   z-index: 10 !important;
   background: #075E54 !important;
   flex-shrink: 0 !important;
-  padding-bottom: 32px !important;
+  padding-bottom: 35px !important;
   padding-top: 10px !important;
   min-height: 68px !important;
   display: flex !important;
@@ -147,13 +147,13 @@ body {
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .profile-bottom-nav {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 35px) !important;
   }
 }
 
 @media screen and (max-width: 768px) and (-webkit-min-device-pixel-ratio: 0) {
   .profile-bottom-nav {
-    padding-bottom: 40px !important;
+    padding-bottom: 43px !important;
   }
 }
 
@@ -170,7 +170,7 @@ body {
   z-index: 10 !important;
   background: #075E54 !important;
   flex-shrink: 0 !important;
-  padding-bottom: 32px !important;
+  padding-bottom: 35px !important;
   padding-top: 10px !important;
   min-height: 68px !important;
   display: flex !important;
@@ -182,13 +182,13 @@ body {
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .contact-profile-bottom-nav {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 35px) !important;
   }
 }
 
 @media screen and (max-width: 768px) and (-webkit-min-device-pixel-ratio: 0) {
   .contact-profile-bottom-nav {
-    padding-bottom: 40px !important;
+    padding-bottom: 43px !important;
   }
 }
 
@@ -204,19 +204,19 @@ body {
   min-height: 0 !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  padding-bottom: 220px !important;
+  padding-bottom: 400px !important;
   position: relative !important;
 }
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .messages-container {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 220px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 400px) !important;
   }
 }
 
 @media screen and (max-width: 768px) and (-webkit-min-device-pixel-ratio: 0) {
   .messages-container {
-    padding-bottom: 240px !important;
+    padding-bottom: 420px !important;
   }
 }
 
@@ -242,6 +242,19 @@ body {
 @media screen and (max-width: 768px) and (-webkit-min-device-pixel-ratio: 0) {
   .message-input-wrapper {
     padding-bottom: 16px !important;
+  }
+}
+
+/* ============================================
+   ✅ MESSAGE INPUT BOX - FIXED FOR ALL BROWSERS
+   ============================================ */
+.message-input-box {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px) !important;
+}
+
+@media screen and (max-width: 768px) {
+  .message-input-box {
+    padding-bottom: 85px !important;
   }
 }
 
@@ -631,17 +644,4 @@ input:focus, textarea:focus {
   justify-content: center !important;
   padding: 4px 8px !important;
   touch-action: manipulation !important;
-}
-
-/* ============================================
-   ✅ MESSAGE INPUT BOX - FIXED FOR ALL BROWSERS
-   ============================================ */
-.message-input-box {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
-}
-
-@media screen and (max-width: 768px) {
-  .message-input-box {
-    padding-bottom: 16px !important;
-  }
 }
