@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef, memo } from 'react'
+import React, { useState, useEffect, useRef, memo, useCallback } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useSocket } from '../../hooks/useSocket'
 import { CheckCheck, MessageCircle, CheckSquare, Square, Pin, Clock } from 'lucide-react'
 import api from '../../utils/api'
 
-// ✅ Wrap with React.memo to prevent re-renders when searchQuery changes
 const ChatList = memo(({ 
   conversations, 
   currentConversation, 
@@ -13,48 +12,35 @@ const ChatList = memo(({
   isSelectMode = false,
   selectedConversations = [],
   toggleConversationSelection = () => {},
-  setConversations
+  setConversations,
+  messageStatuses = {}
 }) => {
   const { user } = useAuth()
   const { socket } = useSocket()
   const [onlineUsers, setOnlineUsers] = useState([])
   const [typingUsers, setTypingUsers] = useState({})
+  
+  // ✅ Use ref to track if we're updating
+  const isUpdatingRef = useRef(false)
 
-  // ✅ Use socket.onAny to catch ALL events and filter for user-typing
+  // ✅ Socket listener for typing
   useEffect(() => {
-    if (!socket) {
-      console.log('⏳ Socket not available in ChatList')
-      return
-    }
-
-    console.log('🔄 ChatList: Setting up onAny listener for user-typing...')
+    if (!socket) return
 
     const handleAnyEvent = (event, ...args) => {
       if (event === 'user-typing') {
         const data = args[0]
-        console.log('📩📩📩 ChatList onAny caught user-typing:', data)
-        
         const { conversationId, userId, isTyping } = data
         
-        if (userId === user?._id) {
-          console.log('⏭️ ChatList: Skipping own typing event')
-          return
-        }
-        
-        if (!conversationId) {
-          console.warn('⚠️ ChatList: No conversationId in typing event')
-          return
-        }
+        if (userId === user?._id) return
+        if (!conversationId) return
         
         const convId = conversationId.toString()
         
         setTypingUsers(prev => {
           if (isTyping) {
-            console.log(`✅ ChatList: Adding typing for conversation: ${convId} by user: ${userId}`)
-            const newState = { ...prev, [convId]: userId }
-            return newState
+            return { ...prev, [convId]: userId }
           } else {
-            console.log(`✅ ChatList: Removing typing for conversation: ${convId}`)
             const newState = { ...prev }
             delete newState[convId]
             return newState
@@ -64,54 +50,15 @@ const ChatList = memo(({
     }
 
     socket.onAny(handleAnyEvent)
-    console.log('✅ ChatList: onAny listener registered')
 
     return () => {
-      if (socket) {
-        socket.offAny(handleAnyEvent)
-        console.log('🧹 ChatList: onAny listener removed')
-      }
+      socket.offAny(handleAnyEvent)
     }
   }, [socket, user?._id])
 
-  // ✅ Handle visibility change - Don't refresh if search input is focused
+  // ✅ Socket listeners for real-time updates
   useEffect(() => {
-    const handleVisibilityChange = async () => {
-      // ✅ Check if search input is focused
-      const activeElement = document.activeElement
-      const searchInput = document.getElementById('search-input-field')
-      
-      if (activeElement === searchInput) {
-        console.log('⏭️ Search input focused, skipping refresh')
-        return
-      }
-      
-      if (document.visibilityState === 'visible') {
-        console.log('📱 ChatList became visible - refreshing conversations')
-        try {
-          const response = await api.get('/conversations')
-          if (setConversations) {
-            setConversations(response.data)
-          }
-        } catch (error) {
-          console.error('Failed to refresh conversations:', error)
-        }
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [setConversations])
-
-  // ✅ All other socket listeners
-  useEffect(() => {
-    if (!socket) {
-      return
-    }
-
-    console.log('🔄 Setting up ChatList other socket listeners...')
+    if (!socket) return
 
     const handleStatusChange = ({ userId, status }) => {
       setOnlineUsers(prev => {
@@ -123,41 +70,23 @@ const ChatList = memo(({
       })
     }
 
-    const handleConversationUpdated = ({ conversation }) => {
-      if (!conversation || !setConversations) return
-      
-      setConversations(prev => {
-        const exists = prev.some(c => c._id === conversation._id)
-        if (exists) {
-          const newConvs = prev.filter(c => c._id !== conversation._id)
-          return [conversation, ...newConvs]
-        } else {
-          return [conversation, ...prev]
-        }
-      })
-    }
-
     const handleNewMessage = (message) => {
       if (!message || !message.conversation || !setConversations) return
       
       const conversationId = message.conversation._id || message.conversation
       
+      // ✅ Update conversation with new message - move to top
       setConversations(prev => {
         const existingIndex = prev.findIndex(c => c._id === conversationId)
         
-        if (existingIndex === -1) {
-          return prev
-        }
+        if (existingIndex === -1) return prev
         
         const updatedConversations = [...prev]
         const conv = { ...updatedConversations[existingIndex] }
         
-        const isTemp = message._id && message._id.startsWith('temp_')
-        
         conv.lastMessage = {
           ...message,
-          status: message.status || 'sent',
-          isTemp: isTemp
+          status: message.status || 'sent'
         }
         conv.updatedAt = message.createdAt || new Date().toISOString()
         
@@ -168,6 +97,7 @@ const ChatList = memo(({
           }
         }
         
+        // ✅ Move to top
         updatedConversations.splice(existingIndex, 1)
         updatedConversations.unshift(conv)
         
@@ -242,6 +172,49 @@ const ChatList = memo(({
       }
     }
 
+    const handleMessageDelivered = ({ messageId, conversationId, message }) => {
+      if (!setConversations) return
+      
+      setConversations(prev => {
+        const convIndex = prev.findIndex(c => c._id === conversationId)
+        if (convIndex === -1) return prev
+        
+        const updated = [...prev]
+        const conv = { ...updated[convIndex] }
+        
+        if (conv.lastMessage && conv.lastMessage._id === messageId) {
+          conv.lastMessage = {
+            ...conv.lastMessage,
+            status: 'delivered'
+          }
+        }
+        updated[convIndex] = conv
+        return updated
+      })
+    }
+
+    const handleMessageRead = ({ messageId, conversationId, userId }) => {
+      if (userId === user?._id) return
+      if (!setConversations) return
+      
+      setConversations(prev => {
+        const convIndex = prev.findIndex(c => c._id === conversationId)
+        if (convIndex === -1) return prev
+        
+        const updated = [...prev]
+        const conv = { ...updated[convIndex] }
+        
+        if (conv.lastMessage && conv.lastMessage._id === messageId) {
+          conv.lastMessage = {
+            ...conv.lastMessage,
+            status: 'read'
+          }
+        }
+        updated[convIndex] = conv
+        return updated
+      })
+    }
+
     const handleMessageDeleted = ({ messageId, conversationId }) => {
       if (!setConversations) return
       
@@ -261,92 +234,26 @@ const ChatList = memo(({
       })
     }
 
-    const handleMessageDelivered = ({ messageId, conversationId, message }) => {
-      if (!setConversations) return
-      
-      setConversations(prev => {
-        const convIndex = prev.findIndex(c => c._id === conversationId)
-        if (convIndex === -1) return prev
-        
-        const conv = { ...prev[convIndex] }
-        
-        if (conv.lastMessage && conv.lastMessage._id === messageId) {
-          conv.lastMessage = {
-            ...conv.lastMessage,
-            status: 'delivered'
-          }
-        }
-        
-        const newConversations = [...prev]
-        newConversations[convIndex] = conv
-        
-        return newConversations
-      })
-    }
-
-    const handleMessageRead = ({ messageId, conversationId, userId }) => {
-      if (!setConversations) return
-      if (userId === user?._id) return
-      
-      setConversations(prev => {
-        return prev.map(conv => {
-          if (conv._id === conversationId && conv.lastMessage && conv.lastMessage._id === messageId) {
-            const updatedConv = { ...conv }
-            updatedConv.lastMessage = {
-              ...conv.lastMessage,
-              status: 'read'
-            }
-            return updatedConv
-          }
-          return conv
-        })
-      })
-    }
-
     socket.on('user-status-change', handleStatusChange)
-    socket.on('conversation-updated', handleConversationUpdated)
     socket.on('new-message', handleNewMessage)
     socket.on('new-message-notification', handleNewMessage)
     socket.on('message-reaction', handleMessageReaction)
     socket.on('messages-read', handleMessagesRead)
-    socket.on('message-deleted', handleMessageDeleted)
     socket.on('message-delivered', handleMessageDelivered)
     socket.on('message-read', handleMessageRead)
-
-    console.log('✅ ChatList other socket listeners registered')
+    socket.on('message-deleted', handleMessageDeleted)
 
     return () => {
-      if (socket) {
-        socket.off('user-status-change')
-        socket.off('conversation-updated')
-        socket.off('new-message')
-        socket.off('new-message-notification')
-        socket.off('message-reaction')
-        socket.off('messages-read')
-        socket.off('message-deleted')
-        socket.off('message-delivered')
-        socket.off('message-read')
-      }
+      socket.off('user-status-change')
+      socket.off('new-message')
+      socket.off('new-message-notification')
+      socket.off('message-reaction')
+      socket.off('messages-read')
+      socket.off('message-delivered')
+      socket.off('message-read')
+      socket.off('message-deleted')
     }
   }, [socket, user, setConversations])
-
-  // ✅ FIXED: Only reorder when conversations actually change
-  useEffect(() => {
-    if (!conversations || conversations.length === 0) return
-    
-    const sorted = [...conversations].sort((a, b) => {
-      const timeA = new Date(a.updatedAt || a.lastMessageTime || 0).getTime()
-      const timeB = new Date(b.updatedAt || b.lastMessageTime || 0).getTime()
-      return timeB - timeA
-    })
-    
-    const currentIds = conversations.map(c => c._id).join(',')
-    const sortedIds = sorted.map(c => c._id).join(',')
-    
-    if (currentIds !== sortedIds && setConversations) {
-      setConversations(sorted)
-    }
-  }, [conversations, setConversations])
 
   const getOtherParticipant = (conversation) => {
     if (conversation.isGroup) return null
@@ -426,7 +333,8 @@ const ChatList = memo(({
     
     if (conversation.lastMessage.sender?._id !== user._id) return null
     
-    const status = conversation.lastMessage.status
+    const messageId = conversation.lastMessage._id
+    const status = messageStatuses[messageId] || conversation.lastMessage.status
     
     switch (status) {
       case 'sent':
@@ -465,6 +373,7 @@ const ChatList = memo(({
     if (isSelectMode) {
       toggleConversationSelection(conversation._id)
     } else {
+      // ✅ Just select the conversation - NO REORDERING
       onSelectConversation(conversation)
     }
   }
@@ -505,7 +414,6 @@ const ChatList = memo(({
     <div>
       {conversations.map((conversation) => {
         const isActive = currentConversation?._id === conversation._id
-        const online = isUserOnline(conversation)
         const unreadCount = conversation.unreadCount?.[user._id] || 0
         const name = getConversationName(conversation)
         const avatar = getConversationAvatar(conversation)
@@ -617,7 +525,6 @@ const ChatList = memo(({
   )
 })
 
-// ✅ Add display name for debugging
 ChatList.displayName = 'ChatList'
 
 export default ChatList

@@ -4,10 +4,10 @@ import {
   Copy, Trash2, Edit, Forward, X, Send, MoreVertical,
   Reply, Info, Pin, PinOff, Plus
 } from 'lucide-react'
-import axios from 'axios'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
 import Portal from '../common/Portal'
+import api from '../../utils/api' // ✅ Import the API instance
 
 const POPUP_GAP = 8
 const MENU_WIDTH = 160
@@ -319,12 +319,12 @@ const getStatusIcon = () => {
   
   // ✅ Show proper status with spacing
   switch (message.status) {
-    case 'sent':
-      return <Check size={14} className="text-gray-400" />
-    case 'delivered':
-      return <CheckCheck size={14} className="text-gray-400" />
     case 'read':
       return <CheckCheck size={14} className="text-[#53BDEB]" />
+    case 'delivered':
+      return <CheckCheck size={14} className="text-gray-400" />
+    case 'sent':
+      return <Check size={14} className="text-gray-400" />
     default:
       return <Clock size={14} className="text-gray-400" />
   }
@@ -340,7 +340,7 @@ const getStatusIcon = () => {
 
   const deleteMessage = async (deleteFor) => {
     try {
-      await axios.delete(`/api/messages/${message._id}?deleteFor=${deleteFor}`)
+      await api.delete(`/messages/${message._id}?deleteFor=${deleteFor}`) // ✅ Using api instance
       onDelete?.(message._id, deleteFor)
       toast.success(`Message deleted${deleteFor === 'everyone' ? ' for everyone' : ''}`)
       setShowMenu(false)
@@ -369,7 +369,7 @@ const getStatusIcon = () => {
     }
 
     try {
-      const response = await axios.put(`/api/messages/${message._id}`, {
+      const response = await api.put(`/messages/${message._id}`, { // ✅ Using api instance
         content: editContent.trim()
       })
       

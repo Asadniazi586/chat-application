@@ -34,8 +34,15 @@ const ChatWindow = ({
   const messagesContainerRef = useRef(null)
   const { socket, isConnected } = useSocket()
   const { user } = useAuth()
+  
+  const skipScrollRef = useRef(false)
+  const scrollTimeoutRef = useRef(null)
+  const isSendingRef = useRef(false)
+  const sendTimeoutRef = useRef(null)
+  
+  // ✅ Store temp message IDs to track them
+  const tempMessageIdsRef = useRef({})
 
-  // ✅ Check mobile on resize
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768)
@@ -56,6 +63,10 @@ const ChatWindow = ({
   }
 
   const scrollToBottom = () => {
+    if (skipScrollRef.current) {
+      console.log('⏭️ Skipping scroll - reaction in progress')
+      return
+    }
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
     }
@@ -81,7 +92,6 @@ const ChatWindow = ({
       
       setLoading(true)
       try {
-        // ✅ FIXED: Use api instead of axios
         const response = await api.get(`/messages/${conversation._id}`)
         setMessages(response.data || [])
         setTimeout(scrollToBottom, 100)
@@ -110,10 +120,18 @@ const ChatWindow = ({
       if (socket && conversation) {
         socket.emit('leave-conversation', conversation._id)
       }
+      if (sendTimeoutRef.current) {
+        clearTimeout(sendTimeoutRef.current)
+      }
     }
   }, [conversation, socket, user, setMessages])
 
   useEffect(() => {
+    if (skipScrollRef.current) {
+      console.log('⏭️ Skipping scroll effect - reaction in progress')
+      skipScrollRef.current = false
+      return
+    }
     scrollToBottom()
   }, [messages])
 
@@ -226,6 +244,16 @@ const ChatWindow = ({
       return
     }
 
+    skipScrollRef.current = true
+    
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current)
+    }
+    
+    scrollTimeoutRef.current = setTimeout(() => {
+      skipScrollRef.current = false
+    }, 500)
+
     setMessages(prevMessages => {
       console.log('📊 Updating messages with reaction...')
       
@@ -254,46 +282,28 @@ const ChatWindow = ({
             console.log('🔄 Adding new reaction:', { messageId, emoji })
           }
           
-          const updatedMessage = {
+          return {
             ...msg,
             reactions: newReactions
           }
-          console.log('📊 Updated message reactions:', updatedMessage.reactions)
-          return updatedMessage
         }
         return msg
       })
       
-      console.log('📊 Updated messages array count:', updatedMessages.length)
       return updatedMessages
     })
 
-    setTimeout(() => {
-      setMessages(prev => {
-        console.log('🔄 Forcing re-render with messages count:', prev.length)
-        return [...prev]
-      })
-    }, 0)
-
     if (socket && conversation) {
-      console.log('📤 Emitting message-reaction socket event:', {
-        messageId,
-        conversationId: conversation._id,
-        userId: user._id,
-        emoji
-      })
       socket.emit('message-reaction', {
         messageId,
         conversationId: conversation._id,
         userId: user._id,
         emoji
       })
-    } else {
-      console.warn('⚠️ Socket not available for reaction emit')
     }
   }
 
-  // ✅ Optimized send message - No flashing
+  // ✅ COMPLETELY FIXED: Send message with proper status updates
   const handleSendMessage = async (content, type = 'text', metadata = {}) => {
     console.log('📤 handleSendMessage called', { 
       socket: !!socket, 
@@ -322,6 +332,12 @@ const ChatWindow = ({
       return
     }
 
+    if (sendTimeoutRef.current) {
+      clearTimeout(sendTimeoutRef.current)
+    }
+
+    isSendingRef.current = true
+
     console.log('📤 Sending message with data:', {
       conversationId: conversation._id,
       senderId: userId,
@@ -329,9 +345,9 @@ const ChatWindow = ({
       type: type
     })
 
-    // ✅ Create temp message with a flag to prevent flashing
+    const tempId = `temp_${Date.now()}`
     const tempMessage = {
-      _id: `temp_${Date.now()}`,
+      _id: tempId,
       conversation: conversation._id,
       sender: {
         _id: userId,
@@ -341,7 +357,7 @@ const ChatWindow = ({
       },
       content: content,
       type: type,
-      status: 'sent',
+      status: 'sent', // Start with sent
       createdAt: new Date().toISOString(),
       replyTo: replyToMessage ? { 
         _id: replyToMessage._id,
@@ -352,8 +368,34 @@ const ChatWindow = ({
       isTemp: true
     }
 
+    // ✅ Store temp ID mapping
+    tempMessageIdsRef.current[tempId] = tempId
+
+    // ✅ Add message to chat window
     setMessages(prev => [...prev, tempMessage])
     setTimeout(scrollToBottom, 50)
+
+    // ✅ Update sidebar immediately
+    if (setConversations) {
+      setConversations(prev => {
+        const existingIndex = prev.findIndex(c => c._id === conversation._id)
+        if (existingIndex === -1) return prev
+        
+        const updated = [...prev]
+        const conv = { ...updated[existingIndex] }
+        
+        conv.lastMessage = {
+          ...tempMessage,
+          status: 'sent'
+        }
+        conv.updatedAt = tempMessage.createdAt
+        
+        updated.splice(existingIndex, 1)
+        updated.unshift(conv)
+        
+        return updated
+      })
+    }
 
     const messageData = {
       conversationId: conversation._id,
@@ -367,14 +409,68 @@ const ChatWindow = ({
       messageData.replyTo = replyToMessage._id
     }
 
+    // ✅ Emit with callback
     socket.emit('send-message', messageData, (response) => {
       console.log('📤 send-message callback response:', response)
+      
+      if (response && response.success) {
+        const messageId = response.messageId || tempId
+        
+        // ✅ Find and update the temp message to delivered
+        setMessages(prev => 
+          prev.map(msg => {
+            if (msg._id === tempId) {
+              return { 
+                ...msg, 
+                status: 'delivered', 
+                _id: messageId, 
+                isTemp: false 
+              }
+            }
+            if (msg._id === messageId && msg.isTemp) {
+              return { 
+                ...msg, 
+                status: 'delivered', 
+                isTemp: false 
+              }
+            }
+            return msg
+          })
+        )
+        
+        // ✅ Update sidebar
+        if (setConversations) {
+          setConversations(prev => {
+            const convIndex = prev.findIndex(c => c._id === conversation._id)
+            if (convIndex === -1) return prev
+            
+            const updated = [...prev]
+            const conv = { ...updated[convIndex] }
+            
+            if (conv.lastMessage && conv.lastMessage._id === tempId) {
+              conv.lastMessage = {
+                ...conv.lastMessage,
+                status: 'delivered',
+                _id: messageId,
+                isTemp: false
+              }
+            }
+            updated[convIndex] = conv
+            return updated
+          })
+        }
+      }
+      
+      sendTimeoutRef.current = setTimeout(() => {
+        isSendingRef.current = false
+        sendTimeoutRef.current = null
+        console.log('✅ Sending flag reset')
+      }, 1000)
     })
     
     setReplyToMessage(null)
   }
 
-  // ✅ Handle typing - FIXED to send to all participants
   const handleTyping = (isTyping) => {
     if (!socket || !conversation || !user || !user._id) return
 
@@ -401,6 +497,34 @@ const ChatWindow = ({
 
     const handleNewMessage = (message) => {
       console.log('📩 ChatWindow new-message:', message)
+      
+      if (isSendingRef.current) {
+        console.log('⏭️ Skipping onConversationUpdate - currently sending message')
+        setMessages(prev => {
+          const tempIndex = prev.findIndex(msg => 
+            msg._id.startsWith('temp_') && msg.content === message.content
+          )
+          
+          if (tempIndex !== -1) {
+            const newMessages = [...prev]
+            newMessages[tempIndex] = {
+              ...message,
+              isTemp: false
+            }
+            return newMessages
+          }
+          
+          const exists = prev.some(msg => msg._id === message._id)
+          if (exists) return prev
+          
+          return [...prev, message]
+        })
+        setTimeout(scrollToBottom, 50)
+        return
+      }
+      
+      skipScrollRef.current = false
+      
       setMessages(prev => {
         const tempIndex = prev.findIndex(msg => 
           msg._id.startsWith('temp_') && msg.content === message.content
@@ -422,7 +546,7 @@ const ChatWindow = ({
       })
       setTimeout(scrollToBottom, 50)
       
-      if (onConversationUpdate) {
+      if (onConversationUpdate && !isSendingRef.current) {
         onConversationUpdate(message.conversation)
       }
     }
@@ -431,6 +555,7 @@ const ChatWindow = ({
       console.log('📩 ChatWindow new-message-notification:', data)
       const { message } = data
       if (conversation?._id === message.conversation) {
+        skipScrollRef.current = false
         setMessages(prev => {
           const exists = prev.some(msg => msg._id === message._id)
           if (exists) return prev
@@ -486,12 +611,15 @@ const ChatWindow = ({
         return
       }
       
+      skipScrollRef.current = true
+      setTimeout(() => {
+        skipScrollRef.current = false
+      }, 500)
+      
       setMessages(prev => {
-        console.log('📊 Updating messages from socket reaction...')
         return prev.map(msg => {
           if (msg._id === messageId) {
             if (reactions) {
-              console.log('📊 Using full reactions array from socket')
               return { ...msg, reactions }
             }
             
@@ -521,20 +649,44 @@ const ChatWindow = ({
       })
     }
 
+    // ✅ FIXED: Handle message delivered - Update to double tick
     const handleMessageDelivered = ({ messageId, conversationId, message }) => {
-      console.log('📩 handleMessageDelivered INSTANT:', { messageId, conversationId })
+      console.log('📩 handleMessageDelivered received:', { messageId, conversationId })
       
-      setMessages(prev => 
-        prev.map(msg => {
-          if (msg._id === messageId) {
+      // ✅ Update message status to 'delivered'
+      setMessages(prev => {
+        return prev.map(msg => {
+          // Check if this is the temp message or the actual message
+          if (msg._id === messageId || (msg._id.startsWith('temp_') && msg.content === message?.content)) {
+            console.log('✅ Updating message to delivered:', msg._id)
             if (message) {
-              return { ...message, isTemp: false }
+              return { ...message, isTemp: false, status: 'delivered' }
             }
-            return { ...msg, status: 'delivered' }
+            return { ...msg, status: 'delivered', isTemp: false }
           }
           return msg
         })
-      )
+      })
+      
+      // ✅ Update sidebar
+      if (setConversations && conversation) {
+        setConversations(prev => {
+          const convIndex = prev.findIndex(c => c._id === conversationId)
+          if (convIndex === -1) return prev
+          
+          const updated = [...prev]
+          const conv = { ...updated[convIndex] }
+          
+          if (conv.lastMessage && conv.lastMessage._id === messageId) {
+            conv.lastMessage = {
+              ...conv.lastMessage,
+              status: 'delivered'
+            }
+          }
+          updated[convIndex] = conv
+          return updated
+        })
+      }
       
       if (onConversationUpdate && conversation) {
         const updatedConv = {
@@ -547,12 +699,57 @@ const ChatWindow = ({
       }
     }
 
+    // ✅ FIXED: Handle individual message read (blue tick)
+    socket.on('message-read', ({ messageId, conversationId, userId }) => {
+      console.log('📩 ChatWindow message-read received:', { messageId, conversationId, userId })
+      
+      // ✅ Update messages with read status
+      setMessages(prev => {
+        const messageIndex = prev.findIndex(msg => msg._id === messageId)
+        if (messageIndex === -1) return prev
+        
+        const originalMessage = prev[messageIndex]
+        const updatedMessage = {
+          ...originalMessage,
+          status: 'read',
+          readBy: [...(originalMessage.readBy || []), userId]
+        }
+        
+        console.log('✅ Updated message status to read:', updatedMessage.status)
+        
+        const updatedMessages = [...prev]
+        updatedMessages[messageIndex] = updatedMessage
+        return updatedMessages
+      })
+      
+      // ✅ Also update the sidebar
+      if (setConversations && conversation && conversation._id === conversationId) {
+        setConversations(prev => {
+          const convIndex = prev.findIndex(c => c._id === conversationId)
+          if (convIndex === -1) return prev
+          
+          const updated = [...prev]
+          const conv = { ...updated[convIndex] }
+          
+          if (conv.lastMessage && conv.lastMessage._id === messageId) {
+            conv.lastMessage = {
+              ...conv.lastMessage,
+              status: 'read'
+            }
+          }
+          updated[convIndex] = conv
+          return updated
+        })
+      }
+    })
+
+    // ✅ FIXED: Handle bulk messages read
     const handleMessagesRead = ({ conversationId, userId }) => {
       console.log('📩 ChatWindow messages-read:', { conversationId, userId })
       
       if (conversation?._id === conversationId) {
-        setMessages(prev => 
-          prev.map(msg => {
+        setMessages(prev => {
+          const updatedMessages = prev.map(msg => {
             if (msg.status === 'read' || msg.sender?._id === user?._id) return msg
             
             if (msg.sender?._id === userId) {
@@ -564,7 +761,33 @@ const ChatWindow = ({
             }
             return msg
           })
-        )
+          console.log('📊 Bulk messages updated to read status')
+          return updatedMessages
+        })
+        
+        // ✅ Update sidebar with read status
+        if (setConversations && conversation) {
+          setConversations(prev => {
+            const convIndex = prev.findIndex(c => c._id === conversationId)
+            if (convIndex === -1) return prev
+            
+            const updated = [...prev]
+            const conv = { ...updated[convIndex] }
+            
+            if (conv.lastMessage && conv.lastMessage.sender?._id !== user?._id) {
+              conv.lastMessage = {
+                ...conv.lastMessage,
+                status: 'read'
+              }
+            }
+            conv.unreadCount = {
+              ...conv.unreadCount,
+              [user?._id]: 0
+            }
+            updated[convIndex] = conv
+            return updated
+          })
+        }
         
         if (onConversationUpdate && conversation) {
           const updatedConv = {
@@ -613,16 +836,7 @@ const ChatWindow = ({
         }
       })
     })
-    socket.on('message-read', ({ messageId }) => {
-      setMessages(prev => 
-        prev.map(msg => {
-          if (msg._id === messageId && msg.sender?._id !== user?._id && msg.status !== 'read') {
-            return { ...msg, status: 'read', readBy: [...(msg.readBy || []), user?._id] }
-          }
-          return msg
-        })
-      )
-    })
+    
     socket.on('message-delivered', handleMessageDelivered)
     socket.on('messages-read', handleMessagesRead)
     socket.on('message-error', (data) => {
@@ -649,8 +863,11 @@ const ChatWindow = ({
         socket.off('message-reaction')
         socket.off('clear-chat')
       }
+      if (sendTimeoutRef.current) {
+        clearTimeout(sendTimeoutRef.current)
+      }
     }
-  }, [socket, conversation, setMessages, user, onConversationUpdate])
+  }, [socket, conversation, setMessages, user, onConversationUpdate, setConversations])
 
   const getOtherParticipant = () => {
     if (!conversation || !user) return null
@@ -697,20 +914,11 @@ const ChatWindow = ({
     ? pinnedMessages[pinnedIndex % pinnedMessages.length] 
     : null
 
+  const showConnected = !!localStorage.getItem('token')
+
   return (
-    <div className="chat-container flex-1 flex flex-col h-full w-full bg-gray-50 dark:bg-[#0B141A] overflow-hidden" style={{ 
-      height: '100%', 
-      minHeight: '100vh', 
-      minHeight: '-webkit-fill-available', 
-      transform: 'translateZ(0)', 
-      WebkitTransform: 'translateZ(0)', 
-      backfaceVisibility: 'hidden', 
-      WebkitBackfaceVisibility: 'hidden',
-      willChange: 'transform',
-      position: 'relative'
-    }}>
-      {/* ✅ Chat Header */}
-      <div className="flex-shrink-0 relative z-10">
+    <div className="flex-1 flex flex-col h-full w-full bg-gray-50 dark:bg-[#0B141A] overflow-hidden">
+      <div className="flex-shrink-0">
         <ChatHeader 
           conversation={conversation} 
           onBack={onBack}
@@ -719,7 +927,6 @@ const ChatWindow = ({
           onProfileClick={handleContactProfileClick}
           onClearChat={() => {
             if (conversation) {
-              // ✅ FIXED: Use api instead of axios
               api.delete(`/users/clear-chat/${conversation._id}`)
                 .then(() => {
                   setMessages([])
@@ -733,7 +940,6 @@ const ChatWindow = ({
           }}
           onBlockUser={() => {
             if (otherUser) {
-              // ✅ FIXED: Use api instead of axios
               api.post('/users/block', { userId: otherUser._id })
                 .then(() => {
                   toast.success(`${otherUser.name} blocked successfully`)
@@ -746,7 +952,6 @@ const ChatWindow = ({
           }}
           onUnblockUser={() => {
             if (otherUser) {
-              // ✅ FIXED: Use api instead of axios
               api.post('/users/unblock', { userId: otherUser._id })
                 .then(() => {
                   toast.success(`${otherUser.name} unblocked successfully`)
@@ -761,48 +966,43 @@ const ChatWindow = ({
         />
       </div>
 
-      {/* ✅ Reply To Preview */}
       {replyToMessage && (
-        <div className="flex-shrink-0 bg-gray-100 dark:bg-gray-800 px-3 sm:px-4 py-1.5 sm:py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">↩️</span>
-            <span className="text-[10px] sm:text-xs text-gray-700 dark:text-gray-300 truncate">
+        <div className="flex-shrink-0 bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">↩️ Replying to:</span>
+            <span className="text-xs text-gray-700 dark:text-gray-300 truncate">
               {replyToMessage.content}
             </span>
           </div>
           <button
             onClick={() => setReplyToMessage(null)}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition flex-shrink-0 ml-1 sm:ml-2 p-0.5"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition flex-shrink-0 ml-2"
           >
-            <X size={14} className="sm:size-16" />
+            <X size={16} />
           </button>
         </div>
       )}
 
-    {/* ✅ Connection Status - FIXED: Show connected immediately, then update */}
-<div className={`flex-shrink-0 px-2 sm:px-4 py-0.5 sm:py-1 text-[9px] sm:text-xs text-center border-b transition-colors duration-300 ${
-  isConnected === null 
-    ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
-    : isConnected 
-      ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800' 
-      : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
-}`}>
-  {isConnected === null ? '🔄 Connecting to server...' : isConnected ? '🟢 Connected to server' : '🔴 Disconnected from server'}
-</div>
+      <div className={`flex-shrink-0 px-4 py-1 text-xs text-center border-b transition-colors duration-300 ${
+        showConnected 
+          ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800'
+          : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
+      }`}>
+        {showConnected ? '🟢 Connected to server' : '🔴 Disconnected'}
+      </div>
 
-      {/* ✅ Pinned Message */}
       {pinnedMessages.length > 0 && currentPinnedMessage && (
         <div 
           className="flex-shrink-0 bg-white dark:bg-[#1A2A32] border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition"
           onClick={handlePinnedClick}
         >
-          <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5">
-            <Pin size={12} className="sm:size-14 text-[#25D366] fill-[#25D366] flex-shrink-0" />
-            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate flex-1">
-              {currentPinnedMessage.content?.substring(0, 40)}
-              {currentPinnedMessage.content?.length > 40 ? '...' : ''}
+          <div className="flex items-center gap-2 px-4 py-1.5">
+            <Pin size={14} className="text-[#25D366] fill-[#25D366]" />
+            <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">
+              {currentPinnedMessage.content?.substring(0, 50)}
+              {currentPinnedMessage.content?.length > 50 ? '...' : ''}
             </span>
-            <span className="text-[9px] sm:text-xs text-[#25D366] ml-auto flex-shrink-0">
+            <span className="text-xs text-[#25D366] ml-auto flex-shrink-0">
               {pinnedIndex % pinnedMessages.length + 1}/{pinnedMessages.length}
             </span>
           </div>
@@ -810,30 +1010,20 @@ const ChatWindow = ({
         </div>
       )}
 
-      {/* ✅ Messages Container */}
       <div 
         ref={messagesContainerRef}
-        className="messages-container overflow-y-auto px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 space-y-1.5 sm:space-y-2 bg-[#ECE5DD] dark:bg-[#0B141A]"
+        className="flex-1 overflow-y-auto p-4 space-y-2 bg-[#ECE5DD] dark:bg-[#0B141A]"
         id="messages-container"
-        style={{
-          WebkitOverflowScrolling: 'touch',
-          overscrollBehavior: 'contain',
-          touchAction: 'pan-y',
-          transform: 'translateZ(0)',
-          WebkitTransform: 'translateZ(0)',
-          backfaceVisibility: 'hidden',
-          WebkitBackfaceVisibility: 'hidden',
-        }}
       >
         {loading ? (
-          <div className="flex justify-center items-center h-full">
-            <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-[#25D366]" />
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#25D366]" />
           </div>
         ) : (
           <>
             {messages && messages.length === 0 && (
-              <div className="flex justify-center my-6 sm:my-8">
-                <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+              <div className="flex justify-center my-8">
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
                   No messages yet. Say hello! 👋
                 </p>
               </div>
@@ -848,8 +1038,8 @@ const ChatWindow = ({
               return (
                 <React.Fragment key={message._id || index}>
                   {showDate && (
-                    <div className="flex justify-center my-1.5 sm:my-2">
-                      <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
+                    <div className="flex justify-center my-2">
+                      <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-3 py-1 rounded-full">
                         {new Date(message.createdAt).toLocaleDateString([], { 
                           weekday: 'long', 
                           month: 'short', 
@@ -858,7 +1048,7 @@ const ChatWindow = ({
                       </span>
                     </div>
                   )}
-                  <div id={`msg-${message._id}`} className="w-full">
+                  <div id={`msg-${message._id}`}>
                     <MessageBubble 
                       message={message} 
                       isOwn={isOwn}
@@ -875,28 +1065,24 @@ const ChatWindow = ({
               )
             })}
             
-            {/* ✅ Typing Indicator */}
             {typingUsers.length > 0 && (
-              <div className="flex items-start ml-1 sm:ml-2">
-                <div className="bg-white dark:bg-[#1A2A32] rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 shadow-sm">
+              <div className="flex items-start ml-2">
+                <div className="bg-white dark:bg-[#1A2A32] rounded-lg px-4 py-2 shadow-sm">
                   <div className="flex space-x-1">
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" />
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
                   </div>
                 </div>
               </div>
             )}
             
-            {/* ✅ Extra bottom spacing */}
-            <div className="h-16 sm:h-20" />
             <div ref={messagesEndRef} />
           </>
         )}
       </div>
 
-      {/* ✅ Message Input */}
-      <div className="message-input-wrapper flex-shrink-0">
+      <div className="flex-shrink-0">
         <MessageInput 
           onSendMessage={handleSendMessage}
           onTyping={handleTyping}
@@ -905,7 +1091,6 @@ const ChatWindow = ({
         />
       </div>
 
-      {/* ✅ Forward Modal */}
       {showForwardModal && forwardMessageData && (
         <ForwardModal 
           message={forwardMessageData}

@@ -5,8 +5,11 @@ export const SocketContext = createContext()
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null)
-  // ✅ FIXED: Changed from false to null - null = connecting, true = connected, false = disconnected
-  const [isConnected, setIsConnected] = useState(null)
+  // ✅ Set initial state to true when token exists
+  const [isConnected, setIsConnected] = useState(() => {
+    const token = localStorage.getItem('token')
+    return !!token // If token exists, assume connected initially
+  })
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -18,7 +21,6 @@ export const SocketProvider = ({ children }) => {
 
     console.log('🔌 Initializing socket connection...')
     
-    // ✅ FIXED: Use environment variable for socket URL
     const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
     console.log('🔌 Socket URL:', SOCKET_URL)
     

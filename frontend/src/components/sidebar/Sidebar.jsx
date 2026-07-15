@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useSocket } from '../../hooks/useSocket'
 import SearchBar from './SearchBar'
@@ -6,9 +6,8 @@ import ChatList from '../chat/ChatList'
 import ProfileSidebar from './ProfileSidebar'
 import { 
   LogOut, Sun, Moon, Plus, MessageCircle, 
-  Users, Phone, Settings, Camera, Search, 
-  CircleUser, Circle, MessageSquare, PhoneCall,
-  Trash2, CheckSquare, Square, X
+  Circle, PhoneCall, CircleUser, 
+  CheckSquare, Square, Trash2, X
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import axios from 'axios'
@@ -37,12 +36,17 @@ const Sidebar = ({
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState('')
   const [editAbout, setEditAbout] = useState('')
+  
+  // ✅ Track message statuses for real-time updates
+  const [messageStatuses, setMessageStatuses] = useState({})
+  
+  // ✅ Use ref to prevent duplicate updates
+  const updateTimeoutRef = useRef(null)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
   }, [isDark])
 
-  // ✅ Load user data when user changes
   useEffect(() => {
     if (user) {
       setEditName(user.name || '')
@@ -50,7 +54,6 @@ const Sidebar = ({
     }
   }, [user])
 
-  // Listen for profile open event
   useEffect(() => {
     const handleOpenProfile = () => {
       setShowProfile(true)
@@ -60,6 +63,130 @@ const Sidebar = ({
       document.removeEventListener('openProfile', handleOpenProfile)
     }
   }, [])
+
+  // ✅ Optimized conversation update function - prevents flashing
+  const updateConversation = useCallback((conversationId, updates) => {
+    if (!setConversations) return
+    
+    // ✅ Clear any pending timeout
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current)
+      updateTimeoutRef.current = null
+    }
+    
+    // ✅ Batch updates with a small delay to prevent flashing
+    updateTimeoutRef.current = setTimeout(() => {
+      setConversations(prev => {
+        const index = prev.findIndex(c => c._id === conversationId)
+        if (index === -1) return prev
+        
+        const updated = [...prev]
+        updated[index] = { ...updated[index], ...updates }
+        return updated
+      })
+      updateTimeoutRef.current = null
+    }, 50)
+  }, [setConversations])
+
+  // ✅ Socket listeners for real-time status updates
+  useEffect(() => {
+    if (!socket) return
+
+    const handleMessageDelivered = ({ messageId, conversationId, message }) => {
+      // ✅ Update status
+      setMessageStatuses(prev => ({
+        ...prev,
+        [messageId]: 'delivered'
+      }))
+      
+      // ✅ Update conversation with minimal change
+      if (setConversations) {
+        setConversations(prev => {
+          const convIndex = prev.findIndex(c => c._id === conversationId)
+          if (convIndex === -1) return prev
+          
+          const updated = [...prev]
+          const conv = { ...updated[convIndex] }
+          
+          if (conv.lastMessage && conv.lastMessage._id === messageId) {
+            conv.lastMessage = {
+              ...conv.lastMessage,
+              status: 'delivered'
+            }
+          }
+          updated[convIndex] = conv
+          return updated
+        })
+      }
+    }
+
+    const handleMessageRead = ({ messageId, conversationId, userId }) => {
+      if (userId === user?._id) return
+      
+      setMessageStatuses(prev => ({
+        ...prev,
+        [messageId]: 'read'
+      }))
+      
+      if (setConversations) {
+        setConversations(prev => {
+          const convIndex = prev.findIndex(c => c._id === conversationId)
+          if (convIndex === -1) return prev
+          
+          const updated = [...prev]
+          const conv = { ...updated[convIndex] }
+          
+          if (conv.lastMessage && conv.lastMessage._id === messageId) {
+            conv.lastMessage = {
+              ...conv.lastMessage,
+              status: 'read'
+            }
+          }
+          updated[convIndex] = conv
+          return updated
+        })
+      }
+    }
+
+    const handleMessagesRead = ({ conversationId, userId }) => {
+      if (userId !== user?._id) return
+      
+      if (setConversations) {
+        setConversations(prev => {
+          const convIndex = prev.findIndex(c => c._id === conversationId)
+          if (convIndex === -1) return prev
+          
+          const updated = [...prev]
+          const conv = { ...updated[convIndex] }
+          
+          conv.unreadCount = {
+            ...conv.unreadCount,
+            [user._id]: 0
+          }
+          
+          if (conv.lastMessage && conv.lastMessage.sender?._id !== user._id) {
+            conv.lastMessage = {
+              ...conv.lastMessage,
+              status: 'read'
+            }
+          }
+          
+          updated[convIndex] = conv
+          return updated
+        })
+      }
+    }
+
+    socket.on('message-delivered', handleMessageDelivered)
+    socket.on('message-read', handleMessageRead)
+    socket.on('messages-read', handleMessagesRead)
+
+    return () => {
+      socket.off('message-delivered')
+      socket.off('message-read')
+      socket.off('messages-read')
+    }
+  }, [socket, user, setConversations])
 
   const toggleTheme = () => {
     const newTheme = !isDark
@@ -75,7 +202,6 @@ const Sidebar = ({
     logout()
   }
 
-  // ✅ Handle save profile
   const handleSaveProfile = async () => {
     try {
       const response = await axios.put('/api/users/profile', { 
@@ -95,7 +221,6 @@ const Sidebar = ({
     }
   }
 
-  // ✅ Get user avatar with fallback
   const getUserAvatar = () => {
     if (user?.avatar) {
       return user.avatar
@@ -290,10 +415,11 @@ const Sidebar = ({
           isSelectMode={isSelectMode}
           selectedConversations={selectedConversations}
           toggleConversationSelection={toggleConversationSelection}
+          messageStatuses={messageStatuses}
         />
       </div>
 
-      {/* ✅ Bottom Navigation - WhatsApp Style with User Avatar and Edit */}
+      {/* Bottom Navigation - WhatsApp Style with User Avatar and Edit */}
       <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A2A32]">
         <div className="flex items-center justify-around py-2 px-2">
           {navItems.map((item) => {

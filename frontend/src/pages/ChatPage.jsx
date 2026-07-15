@@ -508,21 +508,26 @@ const ChatPage = () => {
     })
   }
 
-  // ✅ Handle conversation update for reordering
-  const handleConversationUpdate = (conversationId) => {
-    if (!conversationId) return
-    setConversations(prev => {
-      const sorted = [...prev]
-      sorted.sort((a, b) => {
-        if (a._id === conversationId) return -1
-        if (b._id === conversationId) return 1
-        const timeA = new Date(a.lastMessageTime || 0).getTime()
-        const timeB = new Date(b.lastMessageTime || 0).getTime()
-        return timeB - timeA
-      })
-      return sorted
-    })
-  }
+const handleConversationUpdate = (conversationId) => {
+  if (!conversationId) return
+  
+  setConversations(prev => {
+    // ✅ Check if already at top
+    if (prev.length > 0 && prev[0]._id === conversationId) {
+      console.log('⏭️ Conversation already at top, skipping re-sort')
+      return prev
+    }
+    
+    // ✅ Find the conversation
+    const index = prev.findIndex(c => c._id === conversationId)
+    if (index === -1) return prev
+    
+    // ✅ Move to top
+    const conv = prev[index]
+    const newConversations = [conv, ...prev.filter((_, i) => i !== index)]
+    return newConversations
+  })
+}
 
   // Get chat preview
   const getChatPreview = (conversation) => {
