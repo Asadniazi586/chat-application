@@ -88,7 +88,7 @@ const ChatList = memo(({
       })
     }
 
-    // ✅ FIXED: Handle new message - set own messages to 'delivered' (GRAY tick) ONLY if not already 'read'
+    // ✅ FIXED: Handle new message - ALWAYS set own messages to 'delivered' (GRAY tick)
     const handleNewMessage = (message) => {
       if (!message || !message.conversation || !setConversations) return
       
@@ -112,16 +112,14 @@ const ChatList = memo(({
         const updatedConversations = [...prev]
         const conv = { ...updatedConversations[existingIndex] }
         
-        // ✅ CRITICAL FIX: For own messages, set status to 'delivered' (GRAY tick) ONLY if not already 'read'
+        // ✅ CRITICAL FIX: For own messages, ALWAYS set status to 'delivered' (GRAY tick)
         const isOwnMessage = message.sender?._id === user?._id
         let finalStatus = 'delivered' // Default to delivered
         
         if (isOwnMessage) {
-          // ✅ Check if existing conversation already has 'read' status - NEVER downgrade
-          const existingConv = prev.find(c => c._id === conversationId)
-          const existingStatus = existingConv?.lastMessage?.status
-          finalStatus = existingStatus === 'read' ? 'read' : 'delivered'
-          console.log(`✅ [ChatList] Own message status: ${finalStatus} (existing was: ${existingStatus})`)
+          // ✅ Own messages should ALWAYS be 'delivered' - NEVER 'read' from new-message
+          finalStatus = 'delivered'
+          console.log(`✅ [ChatList] Own message status set to 'delivered' (GRAY tick)`)
         } else {
           // For other users' messages, use the incoming status
           finalStatus = message.status || 'sent'
@@ -147,7 +145,7 @@ const ChatList = memo(({
       })
     }
 
-    // ✅ FIXED: Handle new message notification - set own messages to 'delivered' ONLY if not already 'read'
+    // ✅ FIXED: Handle new message notification - ALWAYS set own messages to 'delivered'
     const handleNewMessageNotification = (data) => {
       if (!data || !data.message || !setConversations) return
       
@@ -172,15 +170,13 @@ const ChatList = memo(({
         const updatedConversations = [...prev]
         const conv = { ...updatedConversations[existingIndex] }
         
-        // ✅ CRITICAL FIX: For own messages, keep 'delivered' ONLY if not already 'read'
+        // ✅ CRITICAL FIX: For own messages, ALWAYS keep 'delivered'
         const isOwnMessage = message.sender?._id === user?._id
         let finalStatus = 'delivered'
         
         if (isOwnMessage) {
-          // ✅ Check if existing conversation already has 'read' status - NEVER downgrade
-          const existingStatus = conv.lastMessage?.status
-          finalStatus = existingStatus === 'read' ? 'read' : 'delivered'
-          console.log(`✅ [ChatList] Own message status: ${finalStatus} in notification (existing was: ${existingStatus})`)
+          finalStatus = 'delivered'
+          console.log(`✅ [ChatList] Own message status forced to 'delivered' in notification`)
         } else {
           // For other users' messages, preserve existing status
           const currentStatus = conv.lastMessage?.status || 'sent'
@@ -206,7 +202,8 @@ const ChatList = memo(({
     }
 
     // ✅ FIXED: conversation-updated - status can only move FORWARD (sent -> delivered -> read),
-    // never backwards. If current is 'read', NEVER downgrade it.
+    // never backwards. This stops a stale/late conversation-updated event from downgrading
+    // a message that has already legitimately been marked 'read'.
     const handleConversationUpdated = ({ conversation }) => {
       if (!conversation || !setConversations) return
       
@@ -227,29 +224,18 @@ const ChatList = memo(({
         const incomingStatus = conversation.lastMessage?.status || 'sent'
         
         // ✅ FIXED: monotonic status - only upgrade, never downgrade
-        // If current is 'read', NEVER downgrade it, regardless of incoming status
-        let finalStatus
-        if (currentStatus === 'read') {
-          finalStatus = 'read'
-        } else {
-          finalStatus = (STATUS_RANK[incomingStatus] ?? 0) > (STATUS_RANK[currentStatus] ?? 0)
+        const finalStatus =
+          (STATUS_RANK[incomingStatus] ?? 0) > (STATUS_RANK[currentStatus] ?? 0)
             ? incomingStatus
             : currentStatus
-        }
         
         logStatusChange(conversation._id, currentStatus, finalStatus, 'handleConversationUpdated')
         console.log(`📩 Final status: ${finalStatus} (was ${currentStatus}, incoming ${incomingStatus})`)
         
-        // ✅ CRITICAL: Preserve the existing lastMessage if the incoming one doesn't have one
-        // or if we're keeping our current status
-        const updatedLastMessage = conversation.lastMessage
-          ? {
-              ...conversation.lastMessage,
-              status: finalStatus
-            }
-          : existingConv.lastMessage
-            ? { ...existingConv.lastMessage, status: finalStatus }
-            : null
+        const updatedLastMessage = {
+          ...conversation.lastMessage,
+          status: finalStatus
+        }
         
         updatedConversations[existingIndex] = {
           ...existingConv,
