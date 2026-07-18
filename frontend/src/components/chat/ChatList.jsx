@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useRef, memo, useCallback } from 'react'
+import React, { useState, useEffect, useRef, memo } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useSocket } from '../../hooks/useSocket'
 import { CheckCheck, MessageCircle, CheckSquare, Square, Pin, Clock } from 'lucide-react'
 import api from '../../utils/api'
+
+// ✅ Status rank map used to make status transitions monotonic (never go backwards)
+const STATUS_RANK = { sent: 0, delivered: 1, read: 2 }
 
 const ChatList = memo(({ 
   conversations, 
@@ -19,46 +22,61 @@ const ChatList = memo(({
   const { socket } = useSocket()
   const [onlineUsers, setOnlineUsers] = useState([])
   const [typingUsers, setTypingUsers] = useState({})
-  
-  // ✅ Use ref to track if we're updating
-  const isUpdatingRef = useRef(false)
 
-  // ✅ Socket listener for typing
+  // ✅ Track status changes for debugging
+  const statusLogRef = useRef([])
+
+  const logStatusChange = (conversationId, oldStatus, newStatus, source) => {
+    const logEntry = {
+      conversationId,
+      oldStatus,
+      newStatus,
+      source,
+      timestamp: new Date().toISOString()
+    }
+    statusLogRef.current.push(logEntry)
+    console.log(`🔴🔴🔴 STATUS CHANGE: ${oldStatus} → ${newStatus} from ${source}`, logEntry)
+    
+    if (statusLogRef.current.length > 100) {
+      statusLogRef.current.shift()
+    }
+  }
+
   useEffect(() => {
     if (!socket) return
 
-    const handleAnyEvent = (event, ...args) => {
-      if (event === 'user-typing') {
-        const data = args[0]
-        const { conversationId, userId, isTyping } = data
-        
-        if (userId === user?._id) return
-        if (!conversationId) return
-        
-        const convId = conversationId.toString()
-        
-        setTypingUsers(prev => {
-          if (isTyping) {
-            return { ...prev, [convId]: userId }
-          } else {
-            const newState = { ...prev }
-            delete newState[convId]
-            return newState
-          }
-        })
-      }
+    console.log('🔄 ChatList: Setting up typing listener...')
+
+    const handleTyping = ({ conversationId, userId, isTyping }) => {
+      console.log('📩 ChatList user-typing received:', { conversationId, userId, isTyping })
+      
+      if (userId === user?._id) return
+      if (!conversationId) return
+      
+      const convId = conversationId.toString()
+      
+      setTypingUsers(prev => {
+        if (isTyping) {
+          return { ...prev, [convId]: userId }
+        } else {
+          const newState = { ...prev }
+          delete newState[convId]
+          return newState
+        }
+      })
     }
 
-    socket.onAny(handleAnyEvent)
+    socket.on('user-typing', handleTyping)
 
     return () => {
-      socket.offAny(handleAnyEvent)
+      socket.off('user-typing')
     }
   }, [socket, user?._id])
 
-  // ✅ Socket listeners for real-time updates
   useEffect(() => {
     if (!socket) return
+
+    console.log('🔄 ChatList: Setting up socket listeners...')
 
     const handleStatusChange = ({ userId, status }) => {
       setOnlineUsers(prev => {
@@ -70,36 +88,179 @@ const ChatList = memo(({
       })
     }
 
+    // ✅ FIXED: Handle new message - set own messages to 'delivered' (GRAY tick) ONLY if not already 'read'
     const handleNewMessage = (message) => {
       if (!message || !message.conversation || !setConversations) return
       
+      console.log('📩 ChatList new-message received:', message._id)
+      
       const conversationId = message.conversation._id || message.conversation
       
-      // ✅ Update conversation with new message - move to top
       setConversations(prev => {
         const existingIndex = prev.findIndex(c => c._id === conversationId)
         
-        if (existingIndex === -1) return prev
+        if (existingIndex === -1) {
+          return [{
+            _id: conversationId,
+            lastMessage: message,
+            lastMessageTime: message.createdAt || new Date().toISOString(),
+            participants: message.conversation.participants || [],
+            isGroup: false
+          }, ...prev]
+        }
         
         const updatedConversations = [...prev]
         const conv = { ...updatedConversations[existingIndex] }
         
+        // ✅ CRITICAL FIX: For own messages, set status to 'delivered' (GRAY tick) ONLY if not already 'read'
+        const isOwnMessage = message.sender?._id === user?._id
+        let finalStatus = 'delivered' // Default to delivered
+        
+        if (isOwnMessage) {
+          // ✅ Check if existing conversation already has 'read' status - NEVER downgrade
+          const existingConv = prev.find(c => c._id === conversationId)
+          const existingStatus = existingConv?.lastMessage?.status
+          finalStatus = existingStatus === 'read' ? 'read' : 'delivered'
+          console.log(`✅ [ChatList] Own message status: ${finalStatus} (existing was: ${existingStatus})`)
+        } else {
+          // For other users' messages, use the incoming status
+          finalStatus = message.status || 'sent'
+        }
+        
+        const oldStatus = conv.lastMessage?.status || 'none'
+        logStatusChange(conversationId, oldStatus, finalStatus, 'handleNewMessage')
+        
         conv.lastMessage = {
           ...message,
-          status: message.status || 'sent'
+          status: finalStatus
         }
         conv.updatedAt = message.createdAt || new Date().toISOString()
+        conv.lastMessageTime = message.createdAt || new Date().toISOString()
         
-        if (message.sender?._id !== user?._id) {
-          conv.unreadCount = {
-            ...conv.unreadCount,
-            [user?._id]: (conv.unreadCount?.[user?._id] || 0) + 1
-          }
-        }
-        
-        // ✅ Move to top
+        // ✅ Move conversation to top
         updatedConversations.splice(existingIndex, 1)
         updatedConversations.unshift(conv)
+        
+        console.log(`✅ [ChatList] Updated conversation ${conversationId} with status: ${finalStatus}`)
+        
+        return updatedConversations
+      })
+    }
+
+    // ✅ FIXED: Handle new message notification - set own messages to 'delivered' ONLY if not already 'read'
+    const handleNewMessageNotification = (data) => {
+      if (!data || !data.message || !setConversations) return
+      
+      console.log('📩 ChatList new-message-notification received:', data.message._id)
+      
+      const message = data.message
+      const conversationId = message.conversation._id || message.conversation
+      
+      setConversations(prev => {
+        const existingIndex = prev.findIndex(c => c._id === conversationId)
+        
+        if (existingIndex === -1) {
+          return [{
+            _id: conversationId,
+            lastMessage: message,
+            lastMessageTime: message.createdAt || new Date().toISOString(),
+            participants: message.conversation.participants || [],
+            isGroup: false
+          }, ...prev]
+        }
+        
+        const updatedConversations = [...prev]
+        const conv = { ...updatedConversations[existingIndex] }
+        
+        // ✅ CRITICAL FIX: For own messages, keep 'delivered' ONLY if not already 'read'
+        const isOwnMessage = message.sender?._id === user?._id
+        let finalStatus = 'delivered'
+        
+        if (isOwnMessage) {
+          // ✅ Check if existing conversation already has 'read' status - NEVER downgrade
+          const existingStatus = conv.lastMessage?.status
+          finalStatus = existingStatus === 'read' ? 'read' : 'delivered'
+          console.log(`✅ [ChatList] Own message status: ${finalStatus} in notification (existing was: ${existingStatus})`)
+        } else {
+          // For other users' messages, preserve existing status
+          const currentStatus = conv.lastMessage?.status || 'sent'
+          // Keep the current status if it's already 'read' or 'delivered'
+          finalStatus = currentStatus
+        }
+        
+        logStatusChange(conversationId, conv.lastMessage?.status || 'none', finalStatus, 'handleNewMessageNotification')
+        console.log(`📩 Final status: ${finalStatus}`)
+        
+        conv.lastMessage = {
+          ...message,
+          status: finalStatus
+        }
+        conv.updatedAt = message.createdAt || new Date().toISOString()
+        conv.lastMessageTime = message.createdAt || new Date().toISOString()
+        
+        updatedConversations.splice(existingIndex, 1)
+        updatedConversations.unshift(conv)
+        
+        return updatedConversations
+      })
+    }
+
+    // ✅ FIXED: conversation-updated - status can only move FORWARD (sent -> delivered -> read),
+    // never backwards. If current is 'read', NEVER downgrade it.
+    const handleConversationUpdated = ({ conversation }) => {
+      if (!conversation || !setConversations) return
+      
+      console.log('📩 ChatList conversation-updated received:', conversation._id)
+      console.log('📩 Incoming status:', conversation.lastMessage?.status)
+      
+      setConversations(prev => {
+        const existingIndex = prev.findIndex(c => c._id === conversation._id)
+        
+        if (existingIndex === -1) {
+          return [conversation, ...prev]
+        }
+        
+        const updatedConversations = [...prev]
+        const existingConv = updatedConversations[existingIndex]
+        
+        const currentStatus = existingConv.lastMessage?.status || 'sent'
+        const incomingStatus = conversation.lastMessage?.status || 'sent'
+        
+        // ✅ FIXED: monotonic status - only upgrade, never downgrade
+        // If current is 'read', NEVER downgrade it, regardless of incoming status
+        let finalStatus
+        if (currentStatus === 'read') {
+          finalStatus = 'read'
+        } else {
+          finalStatus = (STATUS_RANK[incomingStatus] ?? 0) > (STATUS_RANK[currentStatus] ?? 0)
+            ? incomingStatus
+            : currentStatus
+        }
+        
+        logStatusChange(conversation._id, currentStatus, finalStatus, 'handleConversationUpdated')
+        console.log(`📩 Final status: ${finalStatus} (was ${currentStatus}, incoming ${incomingStatus})`)
+        
+        // ✅ CRITICAL: Preserve the existing lastMessage if the incoming one doesn't have one
+        // or if we're keeping our current status
+        const updatedLastMessage = conversation.lastMessage
+          ? {
+              ...conversation.lastMessage,
+              status: finalStatus
+            }
+          : existingConv.lastMessage
+            ? { ...existingConv.lastMessage, status: finalStatus }
+            : null
+        
+        updatedConversations[existingIndex] = {
+          ...existingConv,
+          ...conversation,
+          lastMessage: updatedLastMessage
+        }
+        
+        if (existingIndex !== 0) {
+          const conv = updatedConversations.splice(existingIndex, 1)[0]
+          updatedConversations.unshift(conv)
+        }
         
         return updatedConversations
       })
@@ -146,34 +307,57 @@ const ChatList = memo(({
       })
     }
 
+    // ✅ FIXED: Handle messages read - only flip MY sent message to 'read' (BLUE tick)
+    // when SOMEONE ELSE did the reading. Previously this fired on my own 'mark-read'
+    // action too (which the backend broadcasts to all participants), causing my own
+    // message to flip blue even though the other user hadn't actually seen it.
     const handleMessagesRead = ({ conversationId, userId }) => {
+      console.log('📩 [ChatList] messages-read received:', { conversationId, userId })
+      
       if (!setConversations) return
       
-      if (userId === user?._id) {
-        setConversations(prev => {
-          return prev.map(conv => {
-            if (conv._id === conversationId) {
-              const updatedConv = { ...conv }
+      const iAmTheReader = userId === user?._id
+      
+      setConversations(prev => {
+        return prev.map(conv => {
+          if (conv._id === conversationId) {
+            const updatedConv = { ...conv }
+            
+            // Only clear MY unread badge when I'm the one who read
+            if (iAmTheReader && updatedConv.unreadCount) {
               updatedConv.unreadCount = {
-                ...conv.unreadCount,
-                [user?._id]: 0
+                ...updatedConv.unreadCount,
+                [userId]: 0
               }
-              if (conv.lastMessage && conv.lastMessage.sender?._id !== user?._id) {
-                updatedConv.lastMessage = {
-                  ...conv.lastMessage,
-                  status: 'read'
-                }
-              }
-              return updatedConv
             }
-            return conv
-          })
+            
+            // ✅ Only update the last message status to 'read' (BLUE tick) if it's from
+            // the current user AND the OTHER person is the one who read it
+            if (!iAmTheReader && updatedConv.lastMessage && updatedConv.lastMessage.sender?._id === user?._id) {
+              const oldStatus = updatedConv.lastMessage.status || 'sent'
+              const newStatus = 'read'
+              
+              logStatusChange(conversationId, oldStatus, newStatus, 'handleMessagesRead')
+              console.log(`✅ [ChatList] Updated own message status from ${oldStatus} to ${newStatus} (BLUE TICK)`)
+              
+              updatedConv.lastMessage = {
+                ...updatedConv.lastMessage,
+                status: newStatus
+              }
+            }
+            
+            return updatedConv
+          }
+          return conv
         })
-      }
+      })
     }
 
+    // ✅ FIXED: Handle message delivered - only for own messages, preserve 'read'
     const handleMessageDelivered = ({ messageId, conversationId, message }) => {
       if (!setConversations) return
+      
+      console.log('📩 [ChatList] message-delivered received:', { messageId, conversationId })
       
       setConversations(prev => {
         const convIndex = prev.findIndex(c => c._id === conversationId)
@@ -183,9 +367,20 @@ const ChatList = memo(({
         const conv = { ...updated[convIndex] }
         
         if (conv.lastMessage && conv.lastMessage._id === messageId) {
-          conv.lastMessage = {
-            ...conv.lastMessage,
-            status: 'delivered'
+          // ✅ Only update if this is the user's own message
+          const isOwnMessage = conv.lastMessage.sender?._id === user?._id
+          if (isOwnMessage) {
+            const oldStatus = conv.lastMessage.status || 'sent'
+            // ✅ If already 'read', keep it 'read' (BLUE), otherwise set to 'delivered' (GRAY)
+            const newStatus = oldStatus === 'read' ? 'read' : 'delivered'
+            
+            logStatusChange(conversationId, oldStatus, newStatus, 'handleMessageDelivered')
+            console.log(`✅ [ChatList] Updated status from ${oldStatus} to ${newStatus}`)
+            
+            conv.lastMessage = {
+              ...conv.lastMessage,
+              status: newStatus
+            }
           }
         }
         updated[convIndex] = conv
@@ -193,25 +388,41 @@ const ChatList = memo(({
       })
     }
 
+    // ✅ FIXED: Handle message read - update to 'read' (BLUE tick) for messages from current user
     const handleMessageRead = ({ messageId, conversationId, userId }) => {
-      if (userId === user?._id) return
+      console.log('📩 [ChatList] message-read received:', { messageId, conversationId, userId })
+      
       if (!setConversations) return
       
+      // ✅ Skip when I'm the one who triggered the read (my own mark-read echoed back)
+      if (userId === user?._id) {
+        console.log('⏭️ [ChatList] Skipping message-read - I am the reader, not the sender')
+        return
+      }
+      
       setConversations(prev => {
-        const convIndex = prev.findIndex(c => c._id === conversationId)
-        if (convIndex === -1) return prev
-        
-        const updated = [...prev]
-        const conv = { ...updated[convIndex] }
-        
-        if (conv.lastMessage && conv.lastMessage._id === messageId) {
-          conv.lastMessage = {
-            ...conv.lastMessage,
-            status: 'read'
+        return prev.map(conv => {
+          if (conv._id === conversationId) {
+            const updatedConv = { ...conv }
+            if (conv.lastMessage && conv.lastMessage._id === messageId) {
+              // ✅ Update if the message is from the current user (they sent it)
+              if (conv.lastMessage.sender?._id === user?._id) {
+                const oldStatus = conv.lastMessage.status || 'sent'
+                const newStatus = 'read'
+                
+                logStatusChange(conversationId, oldStatus, newStatus, 'handleMessageRead')
+                console.log(`✅ [ChatList] Updated own message status from ${oldStatus} to ${newStatus} (BLUE TICK)`)
+                
+                updatedConv.lastMessage = {
+                  ...conv.lastMessage,
+                  status: newStatus
+                }
+              }
+            }
+            return updatedConv
           }
-        }
-        updated[convIndex] = conv
-        return updated
+          return conv
+        })
       })
     }
 
@@ -236,7 +447,8 @@ const ChatList = memo(({
 
     socket.on('user-status-change', handleStatusChange)
     socket.on('new-message', handleNewMessage)
-    socket.on('new-message-notification', handleNewMessage)
+    socket.on('new-message-notification', handleNewMessageNotification)
+    socket.on('conversation-updated', handleConversationUpdated)
     socket.on('message-reaction', handleMessageReaction)
     socket.on('messages-read', handleMessagesRead)
     socket.on('message-delivered', handleMessageDelivered)
@@ -247,6 +459,7 @@ const ChatList = memo(({
       socket.off('user-status-change')
       socket.off('new-message')
       socket.off('new-message-notification')
+      socket.off('conversation-updated')
       socket.off('message-reaction')
       socket.off('messages-read')
       socket.off('message-delivered')
@@ -254,6 +467,15 @@ const ChatList = memo(({
       socket.off('message-deleted')
     }
   }, [socket, user, setConversations])
+
+  useEffect(() => {
+    console.log('📊 Current conversations statuses:')
+    conversations.forEach(conv => {
+      if (conv.lastMessage) {
+        console.log(`  - ${conv._id}: ${conv.lastMessage.content?.substring(0, 20)} → status: ${conv.lastMessage.status}`)
+      }
+    })
+  }, [conversations])
 
   const getOtherParticipant = (conversation) => {
     if (conversation.isGroup) return null
@@ -328,23 +550,23 @@ const ChatList = memo(({
     return onlineUsers.includes(other._id) || other.status === 'online'
   }
 
+  // ✅ Get status icon - show gray double tick for 'delivered', blue for 'read'
   const getStatusIcon = (conversation) => {
     if (!conversation.lastMessage) return null
     
+    // ✅ Only show status icon for own messages
     if (conversation.lastMessage.sender?._id !== user._id) return null
     
-    const messageId = conversation.lastMessage._id
-    const status = messageStatuses[messageId] || conversation.lastMessage.status
+    const status = conversation.lastMessage.status || 'sent'
     
-    switch (status) {
-      case 'sent':
-        return <CheckCheck size={14} className="inline text-gray-400 mr-1" />
-      case 'delivered':
-        return <CheckCheck size={14} className="inline text-gray-400 mr-1" />
-      case 'read':
-        return <CheckCheck size={14} className="inline text-[#53BDEB] mr-1" />
-      default:
-        return <Clock size={14} className="inline text-gray-400 mr-1" />
+    console.log(`🔵 [ChatList] Status icon for conversation: ${status}`)
+    
+    if (status === 'read') {
+      return <CheckCheck size={14} className="inline text-[#53BDEB] mr-1" />
+    } else if (status === 'delivered' || status === 'sent') {
+      return <CheckCheck size={14} className="inline text-gray-400 mr-1" />
+    } else {
+      return <Clock size={14} className="inline text-gray-400 mr-1" />
     }
   }
 
@@ -373,7 +595,6 @@ const ChatList = memo(({
     if (isSelectMode) {
       toggleConversationSelection(conversation._id)
     } else {
-      // ✅ Just select the conversation - NO REORDERING
       onSelectConversation(conversation)
     }
   }
@@ -511,9 +732,9 @@ const ChatList = memo(({
                     </>
                   )}
                 </p>
-                {unreadCount > 0 && !typingText && (
+                {unreadCount > 0 && !typingText && !isOwn && (
                   <span className="bg-[#25D366] text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[20px] text-center ml-2 flex-shrink-0">
-                    {unreadCount}
+                    {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </div>

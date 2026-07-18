@@ -13,7 +13,7 @@ import {
 import MobileContactProfile from '../components/common/MobileContactProfile'
 import ChatList from '../components/chat/ChatList'
 import SearchBar from '../components/sidebar/SearchBar'
-import ProfileEditFields from '../components/common/ProfileEditFields' // ✅ Add this import
+import ProfileEditFields from '../components/common/ProfileEditFields'
 import api from '../utils/api'
 
 const ChatPage = () => {
@@ -29,15 +29,10 @@ const ChatPage = () => {
   const [showFullProfile, setShowFullProfile] = useState(false)
   const [showMobileContactProfile, setShowMobileContactProfile] = useState(false)
   const [selectedMobileContact, setSelectedMobileContact] = useState(null)
-  // ✅ Remove isEditing, editName, editAbout - now handled by ProfileEditFields
-  // const [isEditing, setIsEditing] = useState(false)
-  // const [editName, setEditName] = useState('')
-  // const [editAbout, setEditAbout] = useState('')
   const [selectedImage, setSelectedImage] = useState(null)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef(null)
   
-  // Search states - These are still needed for desktop but mobile now uses SearchBar component
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -45,12 +40,9 @@ const ChatPage = () => {
   const [searchingUser, setSearchingUser] = useState(false)
   const searchRef = useRef(null)
 
-  // ✅ Selection states for deleting conversations
   const [isSelectMode, setIsSelectMode] = useState(false)
   const [selectedConversations, setSelectedConversations] = useState([])
 
-  
-  // ✅ Create a Set of existing user IDs
   const existingUserIds = useMemo(() => {
     const ids = new Set()
     conversations.forEach(conv => {
@@ -65,7 +57,6 @@ const ChatPage = () => {
     return ids
   }, [conversations, user?._id])
 
-  // Check if mobile on resize
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768)
@@ -77,7 +68,6 @@ const ChatPage = () => {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // ✅ Load user data when user changes - Only for avatar
   useEffect(() => {
     if (user) {
       if (user.avatar) {
@@ -86,14 +76,12 @@ const ChatPage = () => {
     }
   }, [user])
 
-  // ✅ Ensure socket connection
   useEffect(() => {
     if (!socket || !user) return
     console.log('🔌 Setting up socket connection for:', user._id)
     socket.emit('user-online', user._id)
   }, [socket, user])
 
-  // ✅ JOIN ALL CONVERSATION ROOMS
   useEffect(() => {
     if (!socket || !user || conversations.length === 0) return
     console.log('📚 Joining ALL conversation rooms...', conversations.length)
@@ -112,7 +100,6 @@ const ChatPage = () => {
     }
   }, [socket, user, conversations])
 
-  // ✅ Handle profile open event
   useEffect(() => {
     const handleOpenProfile = () => {
       if (isMobile) {
@@ -127,7 +114,22 @@ const ChatPage = () => {
     }
   }, [isMobile])
 
-  // Load conversations - ✅ FIXED
+  useEffect(() => {
+    if (!socket) return
+    
+    const handleAnyEvent = (event, ...args) => {
+      if (event === 'new-message' || event === 'message-read' || event === 'messages-read' || event === 'message-delivered') {
+        console.log(`🔔 [ChatPage] Socket event received: ${event}`, JSON.stringify(args[0], null, 2))
+      }
+    }
+    
+    socket.onAny(handleAnyEvent)
+    
+    return () => {
+      socket.offAny(handleAnyEvent)
+    }
+  }, [socket])
+
   useEffect(() => {
     const loadConversations = async () => {
       if (!user) {
@@ -149,7 +151,7 @@ const ChatPage = () => {
     loadConversations()
   }, [user])
 
-  // ✅ Handle new message - NO TOAST
+  // ✅ FIXED: Handle new message - set own messages to 'delivered' ONLY if not already 'read'
   useEffect(() => {
     if (!socket) return
 
@@ -158,11 +160,29 @@ const ChatPage = () => {
     const handleNewMessage = (message) => {
       console.log('📩 New message received via socket in ChatPage:', message)
       
-      if (message.sender?._id === user?._id) return
+      const isOwnMessage = message.sender?._id === user?._id;
       
       setConversations(prev => {
-        const updated = prev.map(conv => {
+        return prev.map(conv => {
           if (conv._id === message.conversation) {
+            const currentStatus = conv.lastMessage?.status || 'sent';
+            
+            if (isOwnMessage) {
+              // ✅ FIXED: For own messages, set to 'delivered' ONLY if not already 'read'
+              // If it's already 'read', preserve that status - NEVER downgrade
+              const newStatus = currentStatus === 'read' ? 'read' : 'delivered';
+              
+              return {
+                ...conv,
+                lastMessage: {
+                  ...message,
+                  status: newStatus
+                },
+                lastMessageTime: message.createdAt
+              }
+            }
+            
+            // For messages from OTHER users
             const currentUnread = conv.unreadCount?.[user?._id] || 0
             return {
               ...conv,
@@ -176,18 +196,22 @@ const ChatPage = () => {
           }
           return conv
         })
-
-        const sorted = [...updated]
-        sorted.sort((a, b) => {
-          if (a._id === message.conversation) return -1
-          if (b._id === message.conversation) return 1
-          const timeA = new Date(a.lastMessageTime || 0).getTime()
-          const timeB = new Date(b.lastMessageTime || 0).getTime()
-          return timeB - timeA
-        })
-
-        return sorted
       })
+      
+      // Only reorder for messages from OTHER users (own messages are handled by sender logic)
+      if (!isOwnMessage) {
+        setConversations(prev => {
+          const sorted = [...prev]
+          sorted.sort((a, b) => {
+            if (a._id === message.conversation) return -1
+            if (b._id === message.conversation) return 1
+            const timeA = new Date(a.lastMessageTime || 0).getTime()
+            const timeB = new Date(b.lastMessageTime || 0).getTime()
+            return timeB - timeA
+          })
+          return sorted
+        })
+      }
       
       if (currentConversation?._id === message.conversation) {
         setMessages(prev => {
@@ -205,7 +229,7 @@ const ChatPage = () => {
     }
   }, [socket, user?._id, currentConversation])
 
-  // ✅ Handle message-delivered events for real-time updates
+  // ✅ FIXED: Handle message-delivered - ONLY for own messages, preserve 'read'
   useEffect(() => {
     if (!socket) return
 
@@ -218,26 +242,26 @@ const ChatPage = () => {
         const convIndex = prev.findIndex(c => c._id === conversationId)
         if (convIndex === -1) return prev
         
-        const conv = { ...prev[convIndex] }
+        const updated = [...prev]
+        const conv = { ...updated[convIndex] }
         
-        if (message) {
-          conv.lastMessage = {
-            ...message,
-            status: 'delivered'
-          }
-        } else if (conv.lastMessage && conv.lastMessage._id === messageId) {
-          conv.lastMessage = {
-            ...conv.lastMessage,
-            status: 'delivered'
+        // ✅ ONLY update if this is the user's own message and status is not 'read'
+        if (conv.lastMessage && conv.lastMessage._id === messageId) {
+          const isOwnMessage = conv.lastMessage.sender?._id === user?._id;
+          if (isOwnMessage) {
+            // ✅ For own messages, only set to 'delivered' if not 'read'
+            const currentStatus = conv.lastMessage.status || 'sent';
+            const newStatus = currentStatus === 'read' ? 'read' : 'delivered';
+            conv.lastMessage = {
+              ...conv.lastMessage,
+              status: newStatus
+            };
+            console.log(`✅ ChatPage: Updated own message status to ${newStatus}`);
           }
         }
         
-        conv.updatedAt = new Date().toISOString()
-        
-        // ✅ Move to top
-        const newConversations = [conv, ...prev.filter((_, i) => i !== convIndex)]
-        console.log('✅ ChatPage: Conversation moved to top with delivered status')
-        return newConversations
+        updated[convIndex] = conv
+        return updated
       })
     }
 
@@ -246,27 +270,43 @@ const ChatPage = () => {
     return () => {
       socket.off('message-delivered')
     }
-  }, [socket, setConversations])
+  }, [socket, setConversations, user?._id])
 
-  // ✅ Handle message-read events for real-time blue ticks
+  // ✅ FIXED: Handle message-read - flip MY message blue when the OTHER person read it.
+  // Previously this only updated when `sender._id !== user._id`, i.e. it updated
+  // messages that are NOT mine (which never show a tick to begin with) and skipped
+  // the one case that matters: my own sent message being read by someone else.
+  // It also needs to ignore the echo caused by MY OWN mark-read action.
   useEffect(() => {
     if (!socket) return
 
     console.log('📡 Setting up message-read listener in ChatPage')
 
-    const handleMessageRead = ({ messageId, conversationId }) => {
-      console.log('📩 ChatPage message-read RECEIVED:', { messageId, conversationId })
+    const handleMessageRead = ({ messageId, conversationId, userId }) => {
+      console.log('📩 ChatPage message-read RECEIVED:', { messageId, conversationId, userId })
+      
+      // ✅ Skip if I'm the one who triggered the read (my own mark-read echoed back)
+      if (userId === user?._id) {
+        console.log('⏭️ ChatPage: Skipping message-read - I am the reader, not the sender')
+        return
+      }
       
       setConversations(prev => {
         return prev.map(conv => {
           if (conv._id === conversationId && conv.lastMessage && conv.lastMessage._id === messageId) {
-            const updatedConv = { ...conv }
-            updatedConv.lastMessage = {
-              ...conv.lastMessage,
-              status: 'read'
+            // ✅ FIXED: update MY sent message (the other person just read it)
+            if (conv.lastMessage.sender?._id === user?._id) {
+              const updatedConv = { ...conv }
+              updatedConv.lastMessage = {
+                ...conv.lastMessage,
+                status: 'read'
+              }
+              console.log('✅ ChatPage: Blue tick updated for message in sidebar')
+              return updatedConv
+            } else {
+              // ✅ Skip messages that aren't mine
+              console.log('⏭️ ChatPage: Skipping message not sent by me for blue tick')
             }
-            console.log('✅ ChatPage: Blue tick updated for message in sidebar')
-            return updatedConv
           }
           return conv
         })
@@ -278,9 +318,58 @@ const ChatPage = () => {
     return () => {
       socket.off('message-read')
     }
-  }, [socket, setConversations])
+  }, [socket, setConversations, user?._id])
 
-  // ✅ Manual refresh function - for debugging - ✅ FIXED
+  // ✅ FIXED: Handle messages-read - flip MY message blue when the OTHER person read it,
+  // and only clear MY OWN unread badge when I'm the one who triggered the read.
+  // Previously the condition was inverted (`sender._id !== user._id`) so it never
+  // updated my own outgoing message's status.
+  useEffect(() => {
+    if (!socket) return
+
+    console.log('📡 Setting up messages-read listener in ChatPage')
+
+    const handleMessagesRead = ({ conversationId, userId }) => {
+      console.log('📩 ChatPage messages-read RECEIVED:', { conversationId, userId })
+      
+      const iAmTheReader = userId === user?._id
+      
+      setConversations(prev => {
+        return prev.map(conv => {
+          if (conv._id === conversationId) {
+            const updatedConv = { ...conv }
+            
+            // ✅ FIXED: only flip MY sent message blue when the OTHER user read it
+            if (!iAmTheReader && conv.lastMessage && conv.lastMessage.sender?._id === user?._id) {
+              updatedConv.lastMessage = {
+                ...conv.lastMessage,
+                status: 'read'
+              }
+              console.log('✅ ChatPage: Bulk messages marked as read in sidebar')
+            }
+            
+            // ✅ Reset unread count only when I'm the one who read
+            if (iAmTheReader && updatedConv.unreadCount) {
+              updatedConv.unreadCount = {
+                ...updatedConv.unreadCount,
+                [user?._id]: 0
+              }
+            }
+            
+            return updatedConv
+          }
+          return conv
+        })
+      })
+    }
+
+    socket.on('messages-read', handleMessagesRead)
+
+    return () => {
+      socket.off('messages-read')
+    }
+  }, [socket, setConversations, user?._id])
+
   const manualRefresh = async () => {
     try {
       console.log('🔄 Manual refresh triggered...')
@@ -293,10 +382,8 @@ const ChatPage = () => {
     }
   }
 
-  // Make available in console
   window.manualRefresh = manualRefresh
 
-  // ✅ Search users - Desktop only (mobile uses SearchBar component)
   useEffect(() => {
     const searchUsers = async () => {
       if (!searchQuery.trim() || searchQuery.length < 2) {
@@ -322,11 +409,9 @@ const ChatPage = () => {
     return () => clearTimeout(debounce)
   }, [searchQuery, user?._id])
 
-  // ✅ Updated handleSelectConversation with dontOpenChat flag - ✅ FIXED
   const handleSelectConversation = async (conversation, dontOpenChat = false) => {
     console.log('📂 Selecting conversation:', conversation._id)
     
-    // ✅ For mobile: if dontOpenChat is true, just add to list without opening
     if (dontOpenChat) {
       setConversations(prev => {
         const exists = prev.some(conv => conv._id === conversation._id)
@@ -388,7 +473,6 @@ const ChatPage = () => {
     setShowChat(false)
   }
 
-  // ✅ Start conversation with searched user - FIXED for mobile (don't open chat) - ✅ FIXED
   const startConversation = async (selectedUser) => {
     if (existingUserIds.has(selectedUser._id)) {
       toast.info(`Already chatting with ${selectedUser.name}`)
@@ -406,16 +490,13 @@ const ChatPage = () => {
       
       const conversation = response.data
       
-      // ✅ Add conversation to the top immediately (don't open chat)
       setConversations(prev => {
         const exists = prev.some(conv => conv._id === conversation._id)
         if (exists) return prev
         return [conversation, ...prev]
       })
       
-      // ✅ On mobile, just add to list, don't open chat window
       if (isMobile) {
-        // ✅ Just add to conversations list, user can click to open
         setSearchQuery('')
         setSearchResults([])
         setShowSearchResults(false)
@@ -424,7 +505,6 @@ const ChatPage = () => {
         return
       }
       
-      // ✅ On desktop, select the conversation (opens in sidebar)
       handleSelectConversation(conversation)
       
       setSearchQuery('')
@@ -447,16 +527,13 @@ const ChatPage = () => {
     }
   }
 
-  // ✅ Delete selected conversations - FIXED for flashing - ✅ FIXED
   const deleteSelectedConversations = async () => {
     console.log('🗑️ deleteSelectedConversations called, selected:', selectedConversations.length)
     if (selectedConversations.length === 0) return
 
     try {
-      // ✅ First, immediately remove from UI (no flashing)
       const convIdsToDelete = [...selectedConversations]
       
-      // ✅ Immediately update UI
       setConversations(prev => prev.filter(conv => !convIdsToDelete.includes(conv._id)))
       setSelectedConversations([])
       setIsSelectMode(false)
@@ -469,7 +546,6 @@ const ChatPage = () => {
         }
       }
       
-      // ✅ Then delete from server
       for (const convId of convIdsToDelete) {
         await api.delete(`/conversations/${convId}`)
       }
@@ -478,13 +554,11 @@ const ChatPage = () => {
     } catch (error) {
       console.error('Delete conversations error:', error)
       toast.error('Failed to delete conversations')
-      // ✅ Reload if deletion failed
       const response = await api.get('/conversations')
       setConversations(response.data)
     }
   }
 
-  // ✅ Toggle conversation selection
   const toggleConversationSelection = (convId) => {
     console.log('🔄 toggleConversationSelection called for:', convId)
     setSelectedConversations(prev => {
@@ -496,7 +570,6 @@ const ChatPage = () => {
     })
   }
 
-  // ✅ Select all conversations
   const selectAllConversations = () => {
     console.log('📋 selectAllConversations called')
     const allIds = conversations.map(conv => conv._id)
@@ -508,28 +581,24 @@ const ChatPage = () => {
     })
   }
 
-const handleConversationUpdate = (conversationId) => {
-  if (!conversationId) return
-  
-  setConversations(prev => {
-    // ✅ Check if already at top
-    if (prev.length > 0 && prev[0]._id === conversationId) {
-      console.log('⏭️ Conversation already at top, skipping re-sort')
-      return prev
-    }
+  const handleConversationUpdate = (conversationId) => {
+    if (!conversationId) return
     
-    // ✅ Find the conversation
-    const index = prev.findIndex(c => c._id === conversationId)
-    if (index === -1) return prev
-    
-    // ✅ Move to top
-    const conv = prev[index]
-    const newConversations = [conv, ...prev.filter((_, i) => i !== index)]
-    return newConversations
-  })
-}
+    setConversations(prev => {
+      if (prev.length > 0 && prev[0]._id === conversationId) {
+        console.log('⏭️ Conversation already at top, skipping re-sort')
+        return prev
+      }
+      
+      const index = prev.findIndex(c => c._id === conversationId)
+      if (index === -1) return prev
+      
+      const conv = prev[index]
+      const newConversations = [conv, ...prev.filter((_, i) => i !== index)]
+      return newConversations
+    })
+  }
 
-  // Get chat preview
   const getChatPreview = (conversation) => {
     if (!conversation.lastMessage) return 'No messages yet'
     const msg = conversation.lastMessage
@@ -566,14 +635,12 @@ const handleConversationUpdate = (conversationId) => {
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' })
   }
 
-  // ✅ Get user avatar with fallback
   const getUserAvatar = () => {
     if (selectedImage) return selectedImage
     if (user?.avatar) return user.avatar
     return `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=25D366&color=fff&size=24`
   }
 
-  // ✅ Compress image for upload
   const compressImage = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -623,7 +690,6 @@ const handleConversationUpdate = (conversationId) => {
     });
   }
 
-  // ✅ Handle image upload - ✅ FIXED
   const handleImageUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -664,7 +730,6 @@ const handleConversationUpdate = (conversationId) => {
     }
   }
 
-  // ✅ Bottom navigation items (Mobile) - FIXED
   const bottomNavItems = [
     { 
       id: 'updates', 
@@ -673,7 +738,6 @@ const handleConversationUpdate = (conversationId) => {
       onClick: () => {
         setActiveTab('updates')
         setShowFullProfile(false)
-        // ✅ Close any open chat
         if (isMobile && showChat) {
           setShowChat(false)
         }
@@ -687,7 +751,6 @@ const handleConversationUpdate = (conversationId) => {
       onClick: () => {
         setActiveTab('calls')
         setShowFullProfile(false)
-        // ✅ Close any open chat
         if (isMobile && showChat) {
           setShowChat(false)
         }
@@ -701,7 +764,6 @@ const handleConversationUpdate = (conversationId) => {
       onClick: () => {
         setActiveTab('chats')
         setShowFullProfile(false)
-        // ✅ Close any open chat and go back to chat list
         if (isMobile && showChat) {
           setShowChat(false)
         }
@@ -714,7 +776,6 @@ const handleConversationUpdate = (conversationId) => {
       isAvatar: true,
       onClick: () => {
         setActiveTab('profile')
-        // ✅ Close any open chat
         if (isMobile && showChat) {
           setShowChat(false)
         }
@@ -723,7 +784,6 @@ const handleConversationUpdate = (conversationId) => {
     }
   ]
 
-  // ✅ Handle mobile contact profile
   const handleMobileContactProfileClick = (contact) => {
     setSelectedMobileContact(contact)
     setShowMobileContactProfile(true)
@@ -734,7 +794,6 @@ const handleConversationUpdate = (conversationId) => {
     setSelectedMobileContact(null)
   }
 
-  // ✅ Mobile Profile View - FIXED using ProfileEditFields component
   const MobileProfileView = () => {
     const avatarUrl = getUserAvatar()
     
@@ -754,7 +813,6 @@ const handleConversationUpdate = (conversationId) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 sm:p-4">
-          {/* Avatar Section */}
           <div className="flex flex-col items-center mb-4 sm:mb-6">
             <div className="relative group">
               <img
@@ -793,13 +851,11 @@ const handleConversationUpdate = (conversationId) => {
             </p>
           </div>
 
-          {/* ✅ Profile Edit Fields - Using isolated component */}
           <ProfileEditFields 
             user={user} 
             setUser={setUser}
           />
 
-          {/* Settings List */}
           <div className="space-y-0.5 sm:space-y-1">
             {[
               { icon: User, label: 'Profile' },
@@ -825,7 +881,6 @@ const handleConversationUpdate = (conversationId) => {
             })}
           </div>
 
-          {/* Logout Button */}
           <button
             onClick={() => {
               if (socket && user) {
@@ -840,7 +895,6 @@ const handleConversationUpdate = (conversationId) => {
           </button>
         </div>
 
-        {/* ✅ BOTTOM NAVIGATION - Profile page */}
         <div className="profile-bottom-nav">
           {bottomNavItems.map((item) => {
             const Icon = item.icon
@@ -873,7 +927,6 @@ const handleConversationUpdate = (conversationId) => {
     )
   }
 
-  // ✅ Mobile Chat List - Using SearchBar component for search
   const MobileChatList = () => {
     const avatarUrl = getUserAvatar()
     
@@ -923,7 +976,6 @@ const handleConversationUpdate = (conversationId) => {
     
     return (
       <div className="flex flex-col h-full bg-[#ECE5DD] dark:bg-[#0B141A]" style={{ height: '100%', minHeight: '100vh', minHeight: '-webkit-fill-available' }}>
-        {/* ✅ Header - Responsive */}
         <div className="bg-[#075E54] dark:bg-[#1A2A32] px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between flex-shrink-0">
           <h1 className="text-white text-base sm:text-xl font-semibold">WhatsApp</h1>
           <div className="flex items-center gap-2 sm:gap-4">
@@ -997,17 +1049,15 @@ const handleConversationUpdate = (conversationId) => {
           </div>
         </div>
 
-{/* ✅ Search Bar - Using internal state (NO blinking) */}
-<div className="bg-[#075E54] dark:bg-[#1A2A32] px-2 sm:px-3 pb-2 flex-shrink-0">
-  <SearchBar
-    onSelectConversation={handleSelectConversation}
-    conversations={conversations}
-    setConversations={setConversations}
-    isMobile={true}
-  />
-</div>
+        <div className="bg-[#075E54] dark:bg-[#1A2A32] px-2 sm:px-3 pb-2 flex-shrink-0">
+          <SearchBar
+            onSelectConversation={handleSelectConversation}
+            conversations={conversations}
+            setConversations={setConversations}
+            isMobile={true}
+          />
+        </div>
 
-        {/* ✅ Tabs - Responsive */}
         <div className="bg-white dark:bg-[#1A2A32] border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
           <div className="flex overflow-x-auto px-2 py-1 gap-1">
             {['All', 'Unread', 'Favourites', 'Groups'].map((tab, index) => (
@@ -1025,12 +1075,10 @@ const handleConversationUpdate = (conversationId) => {
           </div>
         </div>
 
-        {/* ✅ Archived - Responsive */}
         <div className="bg-white dark:bg-[#1A2A32] px-3 sm:px-4 py-1.5 sm:py-2 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
           <span className="text-[10px] sm:text-sm text-gray-500 dark:text-gray-400 font-medium">Archived</span>
         </div>
 
-        {/* ✅ Chat List - Takes remaining space */}
         <div className="flex-1 overflow-y-auto bg-white dark:bg-[#1A2A32]" style={{ flex: '1 1 auto', minHeight: 0 }}>
           <ChatList
             conversations={conversations}
@@ -1044,7 +1092,6 @@ const handleConversationUpdate = (conversationId) => {
           />
         </div>
 
-        {/* ✅ BOTTOM NAVIGATION - Chats section */}
         <div className="bottom-nav">
           {bottomNavItems.map((item) => {
             const Icon = item.icon
@@ -1077,7 +1124,6 @@ const handleConversationUpdate = (conversationId) => {
     )
   }
 
-  // Desktop View
   if (!isMobile) {
     return (
       <div className="flex h-full w-full">

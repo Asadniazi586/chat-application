@@ -42,6 +42,10 @@ const ChatWindow = ({
   
   // ✅ Store temp message IDs to track them
   const tempMessageIdsRef = useRef({})
+  // ✅ Track if messages are already loaded
+  const messagesLoadedRef = useRef(false)
+  // ✅ Track if initial load is done
+  const initialLoadDoneRef = useRef(false)
 
   useEffect(() => {
     const handleResize = () => {
@@ -87,14 +91,30 @@ const ChatWindow = ({
   }
 
   useEffect(() => {
+    // ✅ Reset loaded flag when conversation changes
+    messagesLoadedRef.current = false
+    initialLoadDoneRef.current = false
+    
     const loadMessages = async () => {
       if (!conversation) return
+      
+      // ✅ If messages already exist for this conversation, don't show loading and use cached data
+      if (messages && messages.length > 0 && messages[0]?.conversation === conversation._id) {
+        console.log('📊 Messages already loaded, skipping fetch')
+        messagesLoadedRef.current = true
+        initialLoadDoneRef.current = true
+        return
+      }
       
       setLoading(true)
       try {
         const response = await api.get(`/messages/${conversation._id}`)
+        // ✅ Set messages immediately without delay
         setMessages(response.data || [])
-        setTimeout(scrollToBottom, 100)
+        messagesLoadedRef.current = true
+        initialLoadDoneRef.current = true
+        // ✅ Scroll to bottom after messages are set
+        setTimeout(scrollToBottom, 50)
       } catch (error) {
         console.error('❌ Error loading messages:', error)
         showToast('Failed to load messages', 'error')
@@ -124,8 +144,9 @@ const ChatWindow = ({
         clearTimeout(sendTimeoutRef.current)
       }
     }
-  }, [conversation, socket, user, setMessages])
+  }, [conversation, socket, user])
 
+  // ✅ Separate effect for scroll when messages change
   useEffect(() => {
     if (skipScrollRef.current) {
       console.log('⏭️ Skipping scroll effect - reaction in progress')
@@ -357,7 +378,7 @@ const ChatWindow = ({
       },
       content: content,
       type: type,
-      status: 'sent', // Start with sent
+      status: 'sent',
       createdAt: new Date().toISOString(),
       replyTo: replyToMessage ? { 
         _id: replyToMessage._id,
@@ -368,14 +389,11 @@ const ChatWindow = ({
       isTemp: true
     }
 
-    // ✅ Store temp ID mapping
     tempMessageIdsRef.current[tempId] = tempId
 
-    // ✅ Add message to chat window
     setMessages(prev => [...prev, tempMessage])
     setTimeout(scrollToBottom, 50)
 
-    // ✅ Update sidebar immediately
     if (setConversations) {
       setConversations(prev => {
         const existingIndex = prev.findIndex(c => c._id === conversation._id)
@@ -409,14 +427,12 @@ const ChatWindow = ({
       messageData.replyTo = replyToMessage._id
     }
 
-    // ✅ Emit with callback
     socket.emit('send-message', messageData, (response) => {
       console.log('📤 send-message callback response:', response)
       
       if (response && response.success) {
         const messageId = response.messageId || tempId
         
-        // ✅ Find and update the temp message to delivered
         setMessages(prev => 
           prev.map(msg => {
             if (msg._id === tempId) {
@@ -438,7 +454,6 @@ const ChatWindow = ({
           })
         )
         
-        // ✅ Update sidebar
         if (setConversations) {
           setConversations(prev => {
             const convIndex = prev.findIndex(c => c._id === conversation._id)
@@ -485,6 +500,193 @@ const ChatWindow = ({
       userId: user._id,
       isTyping
     })
+  }
+
+  // ✅ FIXED: Handle message delivered - preserve 'read' status
+  const handleMessageDelivered = ({ messageId, conversationId, message }) => {
+    console.log('📩 handleMessageDelivered received:', { messageId, conversationId })
+    
+    setMessages(prev => {
+      return prev.map(msg => {
+        if (msg._id === messageId || (msg._id.startsWith('temp_') && msg.content === message?.content)) {
+          console.log('✅ Updating message to delivered:', msg._id)
+          // ✅ FIX: Only update to delivered if not already read
+          const status = msg.status === 'read' ? 'read' : 'delivered';
+          if (message) {
+            return { ...message, isTemp: false, status: status };
+          }
+          return { ...msg, status: status, isTemp: false };
+        }
+        return msg
+      })
+    })
+    
+    if (setConversations && conversation) {
+      setConversations(prev => {
+        const convIndex = prev.findIndex(c => c._id === conversationId)
+        if (convIndex === -1) return prev
+        
+        const updated = [...prev]
+        const conv = { ...updated[convIndex] }
+        
+        if (conv.lastMessage && conv.lastMessage._id === messageId) {
+          // ✅ FIX: Only update to delivered if not already read
+          const currentStatus = conv.lastMessage.status || 'sent';
+          const newStatus = currentStatus === 'read' ? 'read' : 'delivered';
+          conv.lastMessage = {
+            ...conv.lastMessage,
+            status: newStatus
+          };
+        }
+        updated[convIndex] = conv
+        return updated
+      })
+    }
+    
+    if (onConversationUpdate && conversation) {
+      const updatedConv = {
+        ...conversation,
+        lastMessage: conversation.lastMessage 
+          ? { 
+              ...conversation.lastMessage, 
+              status: conversation.lastMessage.status === 'read' ? 'read' : 'delivered' 
+            }
+          : null
+      }
+      onConversationUpdate(updatedConv)
+    }
+  }
+
+  // ✅ FIXED: Handle messages read - only update messages that are MINE (sent by me),
+  // and only when the OTHER participant is the one who read them. Previously this
+  // used `msg.sender?._id !== user?._id` which updated everyone else's messages
+  // (which never show a tick anyway) and skipped the one case that actually matters:
+  // my own outgoing message being marked read by the other person. It also fired
+  // on my own 'mark-read' echo, incorrectly flipping my own message blue.
+  const handleMessagesRead = ({ conversationId, userId }) => {
+    console.log('📩 ChatWindow messages-read:', { conversationId, userId })
+    
+    if (conversation?._id !== conversationId) return
+    
+    // ✅ If I'm the one who triggered mark-read, this event is just my own action
+    // echoed back (used to reset unread badges) - it does NOT mean the other
+    // person read my messages, so skip updating my sent messages' status.
+    if (userId === user?._id) {
+      console.log('⏭️ ChatWindow: Skipping messages-read - I am the reader, not the sender')
+      return
+    }
+    
+    setMessages(prev => {
+      const updatedMessages = prev.map(msg => {
+        // ✅ FIX: Only update MY OWN sent messages (the other user just read them)
+        if (msg.sender?._id === user?._id) {
+          return { 
+            ...msg, 
+            status: 'read',
+            readBy: [...(msg.readBy || []), userId]
+          }
+        }
+        return msg;
+      })
+      console.log('📊 Bulk messages updated to read status')
+      return updatedMessages
+    })
+    
+    if (setConversations && conversation) {
+      setConversations(prev => {
+        const convIndex = prev.findIndex(c => c._id === conversationId)
+        if (convIndex === -1) return prev
+        
+        const updated = [...prev]
+        const conv = { ...updated[convIndex] }
+        
+        // ✅ FIX: Only update if the last message is MINE (the other user read it)
+        if (conv.lastMessage && conv.lastMessage.sender?._id === user?._id) {
+          conv.lastMessage = {
+            ...conv.lastMessage,
+            status: 'read'
+          }
+          console.log('✅ Updated sidebar lastMessage to read (bulk):', conversationId)
+        }
+        updated[convIndex] = conv
+        return updated
+      })
+    }
+    
+    if (onConversationUpdate && conversation) {
+      const updatedConv = {
+        ...conversation,
+        lastMessage: conversation.lastMessage 
+          ? { 
+              ...conversation.lastMessage, 
+              status: conversation.lastMessage.sender?._id === user?._id ? 'read' : conversation.lastMessage.status
+            }
+          : null
+      }
+      onConversationUpdate(updatedConv)
+    }
+  }
+
+  // ✅ FIXED: Handle individual message read - only update MY OWN messages, and only
+  // when someone else read them. Previously this skipped exactly the case that
+  // matters (`originalMessage.sender?._id === user?._id` returned early).
+  const handleMessageRead = ({ messageId, conversationId, userId }) => {
+    console.log('📩 ChatWindow message-read received:', { messageId, conversationId, userId })
+    
+    // ✅ Skip if I'm the one who triggered the read (my own mark-read echoed back)
+    if (userId === user?._id) {
+      console.log('⏭️ Skipping message-read - I am the reader, not the sender')
+      return
+    }
+    
+    setMessages(prev => {
+      const messageIndex = prev.findIndex(msg => msg._id === messageId)
+      if (messageIndex === -1) {
+        console.log('⚠️ Message not found in chat window:', messageId)
+        return prev
+      }
+      
+      const originalMessage = prev[messageIndex]
+      
+      // ✅ FIX: Only update if the message is MINE (someone else just read it)
+      if (originalMessage.sender?._id !== user?._id) {
+        console.log('⏭️ Skipping message not sent by me from message-read')
+        return prev
+      }
+      
+      const updatedMessage = {
+        ...originalMessage,
+        status: 'read',
+        readBy: [...(originalMessage.readBy || []), userId]
+      }
+      
+      console.log('✅ Updated message status to read:', updatedMessage.status)
+      
+      const updatedMessages = [...prev]
+      updatedMessages[messageIndex] = updatedMessage
+      return updatedMessages
+    })
+    
+    if (setConversations && conversation && conversation._id === conversationId) {
+      setConversations(prev => {
+        const convIndex = prev.findIndex(c => c._id === conversationId)
+        if (convIndex === -1) return prev
+        
+        const updated = [...prev]
+        const conv = { ...updated[convIndex] }
+        
+        // ✅ FIX: Only update if the last message is MINE
+        if (conv.lastMessage && conv.lastMessage._id === messageId && conv.lastMessage.sender?._id === user?._id) {
+          conv.lastMessage = {
+            ...conv.lastMessage,
+            status: 'read'
+          }
+          console.log('✅ Updated sidebar lastMessage to read:', conversationId)
+        }
+        updated[convIndex] = conv
+        return updated
+      })
+    }
   }
 
   useEffect(() => {
@@ -649,158 +851,6 @@ const ChatWindow = ({
       })
     }
 
-    // ✅ FIXED: Handle message delivered - Update to double tick
-    const handleMessageDelivered = ({ messageId, conversationId, message }) => {
-      console.log('📩 handleMessageDelivered received:', { messageId, conversationId })
-      
-      // ✅ Update message status to 'delivered'
-      setMessages(prev => {
-        return prev.map(msg => {
-          // Check if this is the temp message or the actual message
-          if (msg._id === messageId || (msg._id.startsWith('temp_') && msg.content === message?.content)) {
-            console.log('✅ Updating message to delivered:', msg._id)
-            if (message) {
-              return { ...message, isTemp: false, status: 'delivered' }
-            }
-            return { ...msg, status: 'delivered', isTemp: false }
-          }
-          return msg
-        })
-      })
-      
-      // ✅ Update sidebar
-      if (setConversations && conversation) {
-        setConversations(prev => {
-          const convIndex = prev.findIndex(c => c._id === conversationId)
-          if (convIndex === -1) return prev
-          
-          const updated = [...prev]
-          const conv = { ...updated[convIndex] }
-          
-          if (conv.lastMessage && conv.lastMessage._id === messageId) {
-            conv.lastMessage = {
-              ...conv.lastMessage,
-              status: 'delivered'
-            }
-          }
-          updated[convIndex] = conv
-          return updated
-        })
-      }
-      
-      if (onConversationUpdate && conversation) {
-        const updatedConv = {
-          ...conversation,
-          lastMessage: conversation.lastMessage 
-            ? { ...conversation.lastMessage, status: 'delivered' }
-            : null
-        }
-        onConversationUpdate(updatedConv)
-      }
-    }
-
-    // ✅ FIXED: Handle individual message read (blue tick)
-    socket.on('message-read', ({ messageId, conversationId, userId }) => {
-      console.log('📩 ChatWindow message-read received:', { messageId, conversationId, userId })
-      
-      // ✅ Update messages with read status
-      setMessages(prev => {
-        const messageIndex = prev.findIndex(msg => msg._id === messageId)
-        if (messageIndex === -1) return prev
-        
-        const originalMessage = prev[messageIndex]
-        const updatedMessage = {
-          ...originalMessage,
-          status: 'read',
-          readBy: [...(originalMessage.readBy || []), userId]
-        }
-        
-        console.log('✅ Updated message status to read:', updatedMessage.status)
-        
-        const updatedMessages = [...prev]
-        updatedMessages[messageIndex] = updatedMessage
-        return updatedMessages
-      })
-      
-      // ✅ Also update the sidebar
-      if (setConversations && conversation && conversation._id === conversationId) {
-        setConversations(prev => {
-          const convIndex = prev.findIndex(c => c._id === conversationId)
-          if (convIndex === -1) return prev
-          
-          const updated = [...prev]
-          const conv = { ...updated[convIndex] }
-          
-          if (conv.lastMessage && conv.lastMessage._id === messageId) {
-            conv.lastMessage = {
-              ...conv.lastMessage,
-              status: 'read'
-            }
-          }
-          updated[convIndex] = conv
-          return updated
-        })
-      }
-    })
-
-    // ✅ FIXED: Handle bulk messages read
-    const handleMessagesRead = ({ conversationId, userId }) => {
-      console.log('📩 ChatWindow messages-read:', { conversationId, userId })
-      
-      if (conversation?._id === conversationId) {
-        setMessages(prev => {
-          const updatedMessages = prev.map(msg => {
-            if (msg.status === 'read' || msg.sender?._id === user?._id) return msg
-            
-            if (msg.sender?._id === userId) {
-              return { 
-                ...msg, 
-                status: 'read',
-                readBy: [...(msg.readBy || []), userId]
-              }
-            }
-            return msg
-          })
-          console.log('📊 Bulk messages updated to read status')
-          return updatedMessages
-        })
-        
-        // ✅ Update sidebar with read status
-        if (setConversations && conversation) {
-          setConversations(prev => {
-            const convIndex = prev.findIndex(c => c._id === conversationId)
-            if (convIndex === -1) return prev
-            
-            const updated = [...prev]
-            const conv = { ...updated[convIndex] }
-            
-            if (conv.lastMessage && conv.lastMessage.sender?._id !== user?._id) {
-              conv.lastMessage = {
-                ...conv.lastMessage,
-                status: 'read'
-              }
-            }
-            conv.unreadCount = {
-              ...conv.unreadCount,
-              [user?._id]: 0
-            }
-            updated[convIndex] = conv
-            return updated
-          })
-        }
-        
-        if (onConversationUpdate && conversation) {
-          const updatedConv = {
-            ...conversation,
-            lastMessage: conversation.lastMessage 
-              ? { ...conversation.lastMessage, status: 'read' }
-              : null
-          }
-          onConversationUpdate(updatedConv)
-        }
-      }
-    }
-
     const handleClearChat = ({ conversationId }) => {
       if (conversation?._id === conversationId) {
         setMessages([])
@@ -837,8 +887,10 @@ const ChatWindow = ({
       })
     })
     
+    // ✅ Use the updated handlers
     socket.on('message-delivered', handleMessageDelivered)
     socket.on('messages-read', handleMessagesRead)
+    socket.on('message-read', handleMessageRead)
     socket.on('message-error', (data) => {
       showToast(data.error || 'Failed to send message', 'error')
     })
@@ -868,6 +920,50 @@ const ChatWindow = ({
       }
     }
   }, [socket, conversation, setMessages, user, onConversationUpdate, setConversations])
+
+  // ✅ Handle mark-read when user leaves the chat window
+  useEffect(() => {
+    return () => {
+      // ✅ Emit mark-read when user leaves the chat window (component unmounts)
+      if (socket && conversation && user && user._id) {
+        console.log('👀 User leaving chat, marking messages as read')
+        socket.emit('mark-read', {
+          conversationId: conversation._id,
+          userId: user._id
+        })
+      }
+    }
+  }, [socket, conversation, user])
+
+  // ✅ Debug: Log sidebar updates
+  useEffect(() => {
+    if (!setConversations) return
+    
+    // Monkey patch setConversations to log status changes
+    const originalSetConversations = setConversations
+    const patchedSetConversations = (updater) => {
+      if (typeof updater === 'function') {
+        originalSetConversations((prev) => {
+          const result = updater(prev)
+          // Log the conversation that was updated
+          if (Array.isArray(result) && result.length > 0) {
+            const changed = result.find((conv, index) => {
+              const prevConv = prev[index]
+              return prevConv && prevConv.lastMessage?.status !== conv.lastMessage?.status
+            })
+            if (changed && changed.lastMessage) {
+              console.log(`🔵🔵🔵 ChatWindow setConversations updated status for ${changed._id}: ${changed.lastMessage.status}`)
+            }
+          }
+          return result
+        })
+      } else {
+        originalSetConversations(updater)
+      }
+    }
+    // Note: This is a debug approach - you might need to use a different approach
+    // Actually, just keep the logs in handleSendMessage and handleMessageDelivered
+  }, [setConversations])
 
   const getOtherParticipant = () => {
     if (!conversation || !user) return null

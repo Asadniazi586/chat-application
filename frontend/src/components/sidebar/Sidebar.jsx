@@ -88,7 +88,7 @@ const Sidebar = ({
     }, 50)
   }, [setConversations])
 
-  // ✅ Socket listeners for real-time status updates
+  // ✅ Socket listeners for real-time status updates with proper cleanup
   useEffect(() => {
     if (!socket) return
 
@@ -177,14 +177,16 @@ const Sidebar = ({
       }
     }
 
+    // ✅ Register listeners with proper handler references
     socket.on('message-delivered', handleMessageDelivered)
     socket.on('message-read', handleMessageRead)
     socket.on('messages-read', handleMessagesRead)
 
+    // ✅ Cleanup - remove ONLY this component's listeners
     return () => {
-      socket.off('message-delivered')
-      socket.off('message-read')
-      socket.off('messages-read')
+      socket.off('message-delivered', handleMessageDelivered)
+      socket.off('message-read', handleMessageRead)
+      socket.off('messages-read', handleMessagesRead)
     }
   }, [socket, user, setConversations])
 

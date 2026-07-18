@@ -86,7 +86,7 @@ export const socketHandler = (io) => {
       console.log(`📊 Room ${roomName} now has ${roomSize} clients`);
     });
 
-    // ✅ SEND MESSAGE - Fixed with immediate delivery status and database update
+    // ✅ SEND MESSAGE - FIXED to send to all participants directly
     socket.on('send-message', async (data) => {
       try {
         console.log('📤 Backend received send-message:', data);
@@ -178,21 +178,25 @@ export const socketHandler = (io) => {
         io.to(roomName).emit('new-message', newMessage);
         console.log('✅ Message emitted to room:', roomName);
 
+        // ✅ ALSO send new-message directly to ALL participants (including those not in room)
+        for (const participantId of allParticipants) {
+          const participantSocketId = onlineUsers.get(participantId);
+          if (participantSocketId) {
+            console.log(`📤 Sending new-message directly to participant ${participantId}`);
+            io.to(participantSocketId).emit('new-message', newMessage);
+          }
+        }
+
         // ✅ Fetch full conversation with participants for sidebar update
         const fullConversation = await Conversation.findById(conversationId)
           .populate('participants', 'name email avatar status lastSeen')
           .populate('lastMessage');
 
-        // ✅ Emit conversation update to ALL participants
-        io.to(roomName).emit('conversation-updated', {
-          conversation: fullConversation
-        });
-        console.log('✅ Conversation update emitted to room');
-
-        // ✅ Also send to each participant individually
+        // ✅ FIXED: Only emit conversation update to participants who are NOT the sender
+        // The sender already has the correct status from new-message event
         for (const participantId of allParticipants) {
           const participantSocketId = onlineUsers.get(participantId);
-          if (participantSocketId) {
+          if (participantSocketId && participantId !== senderId) {
             io.to(participantSocketId).emit('conversation-updated', {
               conversation: fullConversation
             });
@@ -258,100 +262,191 @@ export const socketHandler = (io) => {
       }
     });
 
-    // ✅ Mark messages as read - FIXED to only mark messages from other users
+    // ✅ COMPLETELY FIXED: Mark messages as read with proper individual events
     socket.on('mark-read', async (data) => {
       try {
         const { conversationId, userId } = data;
         console.log(`👀 Marking messages as read for user ${userId} in conversation ${conversationId}`);
 
-        // ✅ Only update messages from OTHER users (not the user's own messages)
-        const result = await Message.updateMany(
-          {
-            conversation: conversationId,
-            sender: { $ne: userId },
-            readBy: { $ne: userId },
-            status: { $ne: 'read' }
-          },
-          {
-            $addToSet: { readBy: userId },
-            status: 'read'
-          }
-        );
-        
-        console.log(`✅ Updated ${result.modifiedCount} messages to read`);
+        // ✅ Get messages that will be marked as read (messages from OTHER users)
+        const messagesToUpdate = await Message.find({
+          conversation: conversationId,
+          sender: { $ne: userId },
+          readBy: { $ne: userId },
+          status: { $ne: 'read' }
+        });
 
-        // ✅ Update unread count
+        console.log(`📊 Found ${messagesToUpdate.length} messages to mark as read`);
+
+        // ✅ Update messages in database
+        if (messagesToUpdate.length > 0) {
+          await Message.updateMany(
+            {
+              conversation: conversationId,
+              sender: { $ne: userId },
+              readBy: { $ne: userId },
+              status: { $ne: 'read' }
+            },
+            {
+              $addToSet: { readBy: userId },
+              status: 'read'
+            }
+          );
+          console.log(`✅ Updated ${messagesToUpdate.length} messages to read`);
+        }
+
+        // ✅ Update unread count - SET TO 0 for this user
         const conversation = await Conversation.findById(conversationId);
         if (conversation) {
           if (!conversation.unreadCount) {
             conversation.unreadCount = new Map();
           }
           conversation.unreadCount.set(userId, 0);
+          
+          // ✅ IMPORTANT FIX: Also update lastMessage status if it's from the other user
+          if (conversation.lastMessage) {
+            const lastMessage = await Message.findById(conversation.lastMessage);
+            if (lastMessage && lastMessage.sender.toString() !== userId) {
+              // If the last message is from the other user, update its status to read
+              if (!lastMessage.readBy) {
+                lastMessage.readBy = [];
+              }
+              if (!lastMessage.readBy.includes(userId)) {
+                lastMessage.readBy.push(userId);
+                lastMessage.status = 'read';
+                await lastMessage.save();
+                
+                // Update the conversation's lastMessage reference
+                conversation.lastMessage = lastMessage._id;
+              }
+            }
+          }
+          
           await conversation.save();
+          console.log(`✅ Unread count reset to 0 for user ${userId}`);
         }
 
         const roomName = `conversation-${conversationId}`;
         const conv = await Conversation.findById(conversationId).populate('participants', '_id');
         const allParticipants = conv.participants.map(p => p._id.toString());
-        
-        // ✅ Emit messages-read event to all participants
+
+        // ✅ Get sender IDs (participants who sent the messages being read)
+        const senderIds = [...new Set(messagesToUpdate.map(m => m.sender.toString()))];
+        console.log(`📤 Sender IDs to notify:`, senderIds);
+
+        // ✅ Emit individual message-read events for EACH message
+        for (const message of messagesToUpdate) {
+          const messageId = message._id.toString();
+          const senderId = message.sender.toString();
+          console.log(`📤 Emitting individual message-read for message: ${messageId} from sender: ${senderId}`);
+          
+          // ✅ Emit to room
+          io.to(roomName).emit('message-read', {
+            messageId: messageId,
+            conversationId,
+            userId
+          });
+          
+          // ✅ IMPORTANT: Also emit directly to the sender's socket
+          const senderSocketId = onlineUsers.get(senderId);
+          if (senderSocketId) {
+            console.log(`📤 Sending message-read directly to sender ${senderId} at socket ${senderSocketId}`);
+            io.to(senderSocketId).emit('message-read', {
+              messageId: messageId,
+              conversationId,
+              userId
+            });
+          }
+          
+          // ✅ Emit to each participant individually
+          for (const participantId of allParticipants) {
+            const participantSocketId = onlineUsers.get(participantId);
+            if (participantSocketId) {
+              io.to(participantSocketId).emit('message-read', {
+                messageId: messageId,
+                conversationId,
+                userId
+              });
+            }
+          }
+        }
+
+        // ✅ Also emit bulk messages-read event for sidebar
+        console.log(`📤 Emitting messages-read to room: ${roomName}`);
         io.to(roomName).emit('messages-read', {
           conversationId,
           userId
         });
-        console.log(`✅ messages-read emitted to room ${roomName}`);
 
-        // ✅ Also emit to each participant individually
+        // ✅ Also emit messages-read to each sender directly
+        for (const senderId of senderIds) {
+          const senderSocketId = onlineUsers.get(senderId);
+          if (senderSocketId) {
+            console.log(`📤 Sending messages-read directly to sender ${senderId}`);
+            io.to(senderSocketId).emit('messages-read', {
+              conversationId,
+              userId
+            });
+          }
+        }
+
+        // ✅ Emit to each participant individually for sidebar
         for (const participantId of allParticipants) {
           const participantSocketId = onlineUsers.get(participantId);
           if (participantSocketId) {
+            console.log(`📤 Sending messages-read to participant ${participantId}`);
             io.to(participantSocketId).emit('messages-read', {
               conversationId,
               userId
             });
-            console.log(`✅ messages-read sent to participant ${participantId}`);
           }
         }
 
-        // ✅ Update conversation for sidebar
+        // ✅ FIXED: Get updated conversation with LAST MESSAGE STATUS properly set
         const updatedConversation = await Conversation.findById(conversationId)
           .populate('participants', 'name email avatar status lastSeen')
           .populate('lastMessage');
-          
-        io.to(roomName).emit('conversation-updated', {
-          conversation: updatedConversation
-        });
-        
+
+        // ✅ FIXED: Only emit conversation-updated to participants who are NOT the sender
+        // The sender's ChatList will update via message-read events
         for (const participantId of allParticipants) {
           const participantSocketId = onlineUsers.get(participantId);
           if (participantSocketId) {
-            io.to(participantSocketId).emit('conversation-updated', {
-              conversation: updatedConversation
-            });
+            // ✅ Don't send conversation-updated to the user who marked as read
+            // They already have the blue tick from message-read events
+            if (participantId !== userId) {
+              io.to(participantSocketId).emit('conversation-updated', {
+                conversation: updatedConversation
+              });
+              console.log(`✅ Sent conversation update to participant ${participantId}`);
+            } else {
+              console.log(`⏭️ Skipping conversation-updated for user ${userId} who marked as read`);
+            }
           }
         }
+
+        console.log(`✅ All read events emitted successfully for ${messagesToUpdate.length} messages`);
 
       } catch (error) {
         console.error('❌ Mark read error:', error);
       }
     });
 
-    // ✅ Typing indicator - FIXED to broadcast with conversationId
+    // ✅ Typing indicator - FIXED to send to all participants
     socket.on('typing', (data) => {
       const { conversationId, userId, isTyping } = data;
       console.log('📤 Typing event received:', { conversationId, userId, isTyping });
       
-      // ✅ Broadcast to ALL participants with conversationId
       const roomName = `conversation-${conversationId}`;
       
-      // ✅ Emit to everyone in the room EXCEPT the sender with conversationId
+      // ✅ Emit to everyone in the room EXCEPT the sender
       socket.to(roomName).emit('user-typing', {
         conversationId,
         userId,
         isTyping
       });
       
-      // ✅ For extra reliability, send to each participant individually with conversationId
+      // ✅ Also send to each participant individually (including those not in room)
       const room = io.sockets.adapter.rooms.get(roomName);
       if (room) {
         room.forEach((socketId) => {
@@ -364,6 +459,30 @@ export const socketHandler = (io) => {
           }
         });
       }
+      
+      // ✅ Also send to all online participants of this conversation
+      const getConversationParticipants = async () => {
+        try {
+          const conv = await Conversation.findById(conversationId).populate('participants', '_id');
+          const allParticipants = conv.participants.map(p => p._id.toString());
+          for (const participantId of allParticipants) {
+            if (participantId !== userId) {
+              const participantSocketId = onlineUsers.get(participantId);
+              if (participantSocketId) {
+                io.to(participantSocketId).emit('user-typing', {
+                  conversationId,
+                  userId,
+                  isTyping
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error getting conversation participants:', error);
+        }
+      };
+      
+      getConversationParticipants();
       
       console.log(`✅ Typing event broadcasted to room: ${roomName}, isTyping: ${isTyping}`);
     });
